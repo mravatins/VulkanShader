@@ -26,6 +26,7 @@ public class Uniforms {
         mat4f_uniformMap.put("ProjMat", VRenderSystem::getProjectionMatrix);
         mat4f_uniformMap.put("MVP", VRenderSystem::getMVP);
         mat4f_uniformMap.put("TextureMat", VRenderSystem::getTextureMatrix);
+        mat4f_uniformMap.put("LightSpaceMat", VRenderSystem::getLightSpaceMatrix);
 
         //Vec1i
         vec1i_uniformMap.put("EndPortalLayers", () -> 15);

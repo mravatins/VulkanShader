@@ -51,6 +51,12 @@ public abstract class VRenderSystem {
     public static MappedBuffer lightDirection0 = new MappedBuffer(3 * 4);
     public static MappedBuffer lightDirection1 = new MappedBuffer(3 * 4);
 
+    public static MappedBuffer lightSpaceMatrix = new MappedBuffer(16 * 4);
+
+    static {
+        new org.joml.Matrix4f().identity().get(lightSpaceMatrix.buffer.asFloatBuffer());
+    }
+
     public static MappedBuffer shaderColor = new MappedBuffer(4 * 4);
     public static MappedBuffer shaderFogColor = new MappedBuffer(4 * 4);
     public static FogData fogData;
@@ -140,6 +146,10 @@ public abstract class VRenderSystem {
 
     public static MappedBuffer getMVP() {
         return MVP;
+    }
+
+    public static MappedBuffer getLightSpaceMatrix() {
+        return lightSpaceMatrix;
     }
 
     public static void setModelOffset(float x, float y, float z) {

@@ -3,7 +3,9 @@ package net.vulkanmod.render.chunk;
 import com.google.common.collect.Sets;
 import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.client.Camera;
@@ -29,6 +31,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.util.profiling.Zone;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.vulkanmod.Initializer;
 import net.vulkanmod.render.PipelineManager;
@@ -42,10 +45,12 @@ import net.vulkanmod.render.profiling.Profiler;
 import net.vulkanmod.render.vertex.TerrainRenderType;
 import net.vulkanmod.vulkan.Renderer;
 import net.vulkanmod.vulkan.VRenderSystem;
+import net.vulkanmod.vulkan.Drawer;
 import net.vulkanmod.vulkan.memory.buffer.Buffer;
 import net.vulkanmod.vulkan.memory.buffer.IndexBuffer;
 import net.vulkanmod.vulkan.memory.buffer.IndirectBuffer;
 import net.vulkanmod.vulkan.memory.MemoryTypes;
+import org.lwjgl.system.MemoryUtil;
 import net.vulkanmod.vulkan.shader.GraphicsPipeline;
 import net.vulkanmod.vulkan.texture.VTextureSelector;
 import org.jetbrains.annotations.Nullable;
@@ -105,6 +110,10 @@ public class WorldRenderer {
     private double zTransparentOld;
 
     IndirectBuffer[] indirectBuffers;
+
+    // Pre-allocated CPU buffer for entity shadow AABB geometry.
+    // 6 faces × 4 verts × 12 bytes = 288 bytes per entity; 4096 entities max ≈ 1 MB.
+    private static final java.nio.ByteBuffer ENTITY_SHADOW_BUF = MemoryUtil.memAlloc(4096 * 288);
 
     public RenderRegionBuilder renderRegionCache;
 
@@ -309,6 +318,131 @@ public class WorldRenderer {
         this.onAllChangedCallbacks.clear();
     }
 
+    public void renderShadowTerrain(double camX, double camY, double camZ) {
+        Renderer renderer = Renderer.getInstance();
+
+        VRenderSystem.enableCull();
+        VRenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
+        GlStateManager._enableDepthTest();
+        GlStateManager._depthMask(true);
+
+        GraphicsPipeline pipeline = PipelineManager.getShadowTerrainShader();
+        renderer.bindGraphicsPipeline(pipeline);
+
+        TextureManager textureManager = Minecraft.getInstance().getTextureManager();
+        AbstractTexture blockAtlasTexture = textureManager.getTexture(TextureAtlas.LOCATION_BLOCKS);
+        RenderSystem.setShaderTexture(0, blockAtlasTexture.getTextureView());
+        VTextureSelector.bindShaderTextures(pipeline);
+
+        IndexBuffer indexBuffer = Renderer.getDrawer().getQuadsIndexBuffer().getIndexBuffer();
+        Renderer.getDrawer().bindIndexBuffer(Renderer.getCommandBuffer(), indexBuffer, indexBuffer.indexType.value);
+
+        // Populate shadow section queues from ALL compiled sections (not just camera-visible),
+        // so shadow map is stable when the camera turns.
+        ChunkAreaManager chunkAreaManager = getChunkAreaManager();
+        if (chunkAreaManager != null) {
+            for (ChunkArea area : chunkAreaManager.chunkAreasArr) {
+                area.shadowSectionQueue.clear();
+            }
+            if (this.sectionGrid != null && this.sectionGrid.sections != null) {
+                for (RenderSection section : this.sectionGrid.sections) {
+                    if (section == null || section.isCompletelyEmpty()) continue;
+                    ChunkArea area = section.getChunkArea();
+                    if (area != null) {
+                        area.shadowSectionQueue.add(section);
+                    }
+                }
+            }
+        }
+
+        // Use same render type filtering as renderSectionLayer — solid data is remapped to CUTOUT_MIPPED
+        Set<TerrainRenderType> allowedRenderTypes = Initializer.CONFIG.uniqueOpaqueLayer
+                ? TerrainRenderType.COMPACT_RENDER_TYPES
+                : TerrainRenderType.SEMI_COMPACT_RENDER_TYPES;
+
+        for (TerrainRenderType renderType : TerrainRenderType.VALUES) {
+            if (renderType == TerrainRenderType.TRANSLUCENT || renderType == TerrainRenderType.TRIPWIRE) continue;
+            if (!allowedRenderTypes.contains(renderType)) continue;
+
+            renderType.setCutoutUniform();
+
+            if (chunkAreaManager != null) {
+                for (ChunkArea chunkArea : chunkAreaManager.chunkAreasArr) {
+                    var queue = chunkArea.shadowSectionQueue;
+                    DrawBuffers drawBuffers = chunkArea.drawBuffers;
+
+                    renderer.uploadAndBindUBOs(pipeline);
+                    if (drawBuffers.getAreaBuffer(renderType) != null && queue.size() > 0) {
+                        drawBuffers.bindBuffers(Renderer.getCommandBuffer(), pipeline, renderType, camX, camY, camZ);
+                        renderer.uploadAndBindUBOs(pipeline);
+                        drawBuffers.buildDrawBatchesDirect(cameraPos, queue, renderType);
+                    }
+                }
+            }
+        }
+
+        VRenderSystem.setModelOffset(0, 0, 0);
+        renderer.pushConstants(pipeline);
+    }
+
+    public void renderEntityShadows(double camX, double camY, double camZ) {
+        if (level == null) return;
+
+        Renderer renderer = Renderer.getInstance();
+        GraphicsPipeline pipeline = PipelineManager.getShadowEntityShader();
+        renderer.bindGraphicsPipeline(pipeline);
+        renderer.uploadAndBindUBOs(pipeline);
+
+        java.nio.ByteBuffer buf = ENTITY_SHADOW_BUF;
+        buf.clear();
+        int vertexCount = 0;
+
+        for (Entity entity : level.entitiesForRendering()) {
+            if (entity.isInvisible() || entity.isSpectator()) continue;
+            AABB box = entity.getBoundingBox();
+
+            float x0 = (float)(box.minX - camX);
+            float y0 = (float)(box.minY - camY);
+            float z0 = (float)(box.minZ - camZ);
+            float x1 = (float)(box.maxX - camX);
+            float y1 = (float)(box.maxY - camY);
+            float z1 = (float)(box.maxZ - camZ);
+
+            if (buf.remaining() < 6 * 4 * 12) break; // guard overflow
+
+            // Top face (y1)
+            putVec3(buf, x0, y1, z0); putVec3(buf, x1, y1, z0);
+            putVec3(buf, x1, y1, z1); putVec3(buf, x0, y1, z1);
+            // Bottom face (y0)
+            putVec3(buf, x0, y0, z1); putVec3(buf, x1, y0, z1);
+            putVec3(buf, x1, y0, z0); putVec3(buf, x0, y0, z0);
+            // +X face
+            putVec3(buf, x1, y0, z1); putVec3(buf, x1, y1, z1);
+            putVec3(buf, x1, y1, z0); putVec3(buf, x1, y0, z0);
+            // -X face
+            putVec3(buf, x0, y0, z0); putVec3(buf, x0, y1, z0);
+            putVec3(buf, x0, y1, z1); putVec3(buf, x0, y0, z1);
+            // +Z face
+            putVec3(buf, x0, y0, z1); putVec3(buf, x0, y1, z1);
+            putVec3(buf, x1, y1, z1); putVec3(buf, x1, y0, z1);
+            // -Z face
+            putVec3(buf, x1, y0, z0); putVec3(buf, x1, y1, z0);
+            putVec3(buf, x0, y1, z0); putVec3(buf, x0, y0, z0);
+
+            vertexCount += 24;
+        }
+
+        if (vertexCount > 0) {
+            buf.flip();
+            Drawer drawer = Renderer.getDrawer();
+            drawer.draw(buf, VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION, vertexCount);
+        }
+    }
+
+    private static void putVec3(java.nio.ByteBuffer buf, float x, float y, float z) {
+        buf.putFloat(x).putFloat(y).putFloat(z);
+    }
+
     public void renderSectionLayer(TerrainRenderType renderType, double camX, double camY, double camZ, Matrix4f modelView, Matrix4f projection) {
         Renderer.getInstance().getMainPass().rebindMainTarget();
 
@@ -352,6 +486,7 @@ public class WorldRenderer {
         RenderSystem.setShaderTexture(2, Minecraft.getInstance().gameRenderer.lightTexture().getTextureView());
 
         VTextureSelector.bindShaderTextures(pipeline);
+        VTextureSelector.bindTexture(3, Renderer.getInstance().getShadowPass().getShadowMap());
 
         IndexBuffer indexBuffer = Renderer.getDrawer().getQuadsIndexBuffer().getIndexBuffer();
         Renderer.getDrawer().bindIndexBuffer(Renderer.getCommandBuffer(), indexBuffer, indexBuffer.indexType.value);

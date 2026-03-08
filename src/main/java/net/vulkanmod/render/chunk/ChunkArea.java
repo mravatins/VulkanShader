@@ -19,6 +19,7 @@ public class ChunkArea {
 
     //Help JIT optimisations by hardcoding the queue size to the max possible ChunkArea limit
     public final StaticQueue<RenderSection> sectionQueue = new StaticQueue<>(512);
+    public final StaticQueue<RenderSection> shadowSectionQueue = new StaticQueue<>(512);
 
     public ChunkArea(int i, Vector3i origin, int minHeight) {
         this.index = i;

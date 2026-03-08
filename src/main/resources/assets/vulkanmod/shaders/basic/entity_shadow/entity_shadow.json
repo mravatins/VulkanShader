@@ -1,0 +1,11 @@
+{
+    "vertex": "entity_shadow",
+    "fragment": "entity_shadow",
+    "samplers": [],
+    "UBOs": [
+        { "type": "vertex", "binding": 0, "fields": [
+            { "name": "LightSpaceMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] }
+        ] }
+    ],
+    "PushConstants": []
+}

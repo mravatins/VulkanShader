@@ -18,6 +18,7 @@ layout (location = 0) out vec4 vertexColor;
 layout (location = 1) out vec2 texCoord0;
 layout (location = 2) out float sphericalVertexDistance;
 layout (location = 3) out float cylindricalVertexDistance;
+layout (location = 4) out vec3 worldPos;
 
 #define COMPRESSED_VERTEX
 
@@ -58,4 +59,5 @@ void main() {
     vertexColor = Color * sample_lightmap2(Sampler2, Position.a);
 
     texCoord0 = UV0 * UV_INV;
+    worldPos = pos;
 }

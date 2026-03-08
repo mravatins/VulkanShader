@@ -23,6 +23,9 @@ import net.minecraft.world.phys.Vec3;
 import net.vulkanmod.render.chunk.WorldRenderer;
 import net.vulkanmod.render.profiling.Profiler;
 import net.vulkanmod.render.vertex.TerrainRenderType;
+import net.vulkanmod.vulkan.Renderer;
+import net.vulkanmod.vulkan.pass.ShadowPass;
+import org.lwjgl.system.MemoryStack;
 import org.joml.Matrix4f;
 import org.joml.Matrix4fc;
 import org.joml.Vector4f;
@@ -116,6 +119,15 @@ public abstract class LevelRendererMixin {
     @Redirect(method = "method_62214", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/chunk/ChunkSectionsToRender;renderGroup(Lnet/minecraft/client/renderer/chunk/ChunkSectionLayerGroup;)V"))
     private void renderSectionLayer(ChunkSectionsToRender instance, ChunkSectionLayerGroup chunkSectionLayerGroup) {
         if (chunkSectionLayerGroup == ChunkSectionLayerGroup.OPAQUE) {
+            try (MemoryStack stack = MemoryStack.stackPush()) {
+                ShadowPass shadowPass = Renderer.getInstance().getShadowPass();
+                shadowPass.begin(Renderer.getCommandBuffer(), stack);
+                this.worldRenderer.renderShadowTerrain(camX, camY, camZ);
+                shadowPass.end(Renderer.getCommandBuffer());
+            }
+
+            Renderer.getInstance().getMainPass().rebindMainTarget();
+
             Profiler profiler = Profiler.getMainProfiler();
             profiler.push("Opaque_terrain");
 

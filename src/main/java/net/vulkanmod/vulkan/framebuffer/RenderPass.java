@@ -84,8 +84,8 @@ public class RenderPass {
                                .initialLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
                                .finalLayout(depthAttachmentInfo.finalLayout);
 
-                VkAttachmentReference depthAttachmentRef = attachmentRefs.get(1)
-                                                                         .attachment(1)
+                VkAttachmentReference depthAttachmentRef = attachmentRefs.get(i)
+                                                                         .attachment(i)
                                                                          .layout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
                 subpass.pDepthStencilAttachment(depthAttachmentRef);
@@ -96,31 +96,49 @@ public class RenderPass {
                           .pAttachments(attachments)
                           .pSubpasses(subpass);
 
-            //Layout transition subpass depency
-            switch (colorAttachmentInfo.finalLayout) {
-                case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR -> {
-                    VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(1, stack);
-                    subpassDependencies.get(0)
-                                       .srcSubpass(VK_SUBPASS_EXTERNAL)
-                                       .dstSubpass(0)
-                                       .srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
-                                       .dstStageMask(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
-                                       .srcAccessMask(0)
-                                       .dstAccessMask(0);
+            //Layout transition subpass dependency
+            if (colorAttachmentInfo != null) {
+                switch (colorAttachmentInfo.finalLayout) {
+                    case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR -> {
+                        VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(1, stack);
+                        subpassDependencies.get(0)
+                                           .srcSubpass(VK_SUBPASS_EXTERNAL)
+                                           .dstSubpass(0)
+                                           .srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+                                           .dstStageMask(VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT)
+                                           .srcAccessMask(0)
+                                           .dstAccessMask(0);
 
-                    renderPassInfo.pDependencies(subpassDependencies);
+                        renderPassInfo.pDependencies(subpassDependencies);
+                    }
+                    case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL -> {
+                        VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(1, stack);
+                        subpassDependencies.get(0)
+                                           .srcSubpass(0)
+                                           .dstSubpass(VK_SUBPASS_EXTERNAL)
+                                           .srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
+                                           .dstStageMask(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
+                                           .srcAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
+                                           .dstAccessMask(VK_ACCESS_SHADER_READ_BIT);
+
+                        renderPassInfo.pDependencies(subpassDependencies);
+                    }
                 }
-                case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL -> {
-                    VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(1, stack);
-                    subpassDependencies.get(0)
-                                       .srcSubpass(0)
-                                       .dstSubpass(VK_SUBPASS_EXTERNAL)
-                                       .srcStageMask(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT)
-                                       .dstStageMask(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
-                                       .srcAccessMask(VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT)
-                                       .dstAccessMask(VK_ACCESS_SHADER_READ_BIT);
+            } else if (depthAttachmentInfo != null) {
+                switch (depthAttachmentInfo.finalLayout) {
+                    case VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL -> {
+                        VkSubpassDependency.Buffer subpassDependencies = VkSubpassDependency.calloc(1, stack);
+                        subpassDependencies.get(0)
+                                           .srcSubpass(0)
+                                           .dstSubpass(VK_SUBPASS_EXTERNAL)
+                                           .srcStageMask(VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT)
+                                           .dstStageMask(VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
+                                           .srcAccessMask(VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+                                           .dstAccessMask(VK_ACCESS_SHADER_READ_BIT)
+                                           .dependencyFlags(VK_DEPENDENCY_BY_REGION_BIT);
 
-                    renderPassInfo.pDependencies(subpassDependencies);
+                        renderPassInfo.pDependencies(subpassDependencies);
+                    }
                 }
             }
 
@@ -159,9 +177,14 @@ public class RenderPass {
         renderArea.extent().set(framebuffer.getWidth(), framebuffer.getHeight());
         renderPassInfo.renderArea(renderArea);
 
-        VkClearValue.Buffer clearValues = VkClearValue.malloc(2, stack);
-        clearValues.get(0).color().float32(VRenderSystem.clearColor);
-        clearValues.get(1).depthStencil().set(1.0f, 0);
+        VkClearValue.Buffer clearValues = VkClearValue.malloc(attachmentCount, stack);
+        if (colorAttachmentInfo != null) {
+            clearValues.get(0).color().float32(VRenderSystem.clearColor);
+        }
+        if (depthAttachmentInfo != null) {
+            int depthClearIdx = colorAttachmentInfo != null ? 1 : 0;
+            clearValues.get(depthClearIdx).depthStencil().set(1.0f, 0);
+        }
 
         renderPassInfo.pClearValues(clearValues);
 
@@ -274,6 +297,10 @@ public class RenderPass {
 
     public long getId() {
         return id;
+    }
+
+    public boolean hasColorAttachment() {
+        return colorAttachmentInfo != null;
     }
 
     public static class AttachmentInfo {

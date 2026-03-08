@@ -19,6 +19,7 @@ import net.vulkanmod.vulkan.framebuffer.SwapChain;
 import net.vulkanmod.vulkan.memory.MemoryManager;
 import net.vulkanmod.vulkan.pass.DefaultMainPass;
 import net.vulkanmod.vulkan.pass.MainPass;
+import net.vulkanmod.vulkan.pass.ShadowPass;
 import net.vulkanmod.vulkan.queue.CommandPool;
 import net.vulkanmod.vulkan.shader.GraphicsPipeline;
 import net.vulkanmod.vulkan.shader.Pipeline;
@@ -103,6 +104,7 @@ public class Renderer {
     int recursion = 0;
 
     MainPass mainPass;
+    ShadowPass shadowPass;
 
     private final List<Runnable> onResizeCallbacks = new ObjectArrayList<>();
 
@@ -124,6 +126,7 @@ public class Renderer {
 
         swapChain = new SwapChain();
         mainPass = DefaultMainPass.create();
+        shadowPass = ShadowPass.create();
 
         drawer = new Drawer();
         drawer.createResources(framesNum);
@@ -313,6 +316,7 @@ public class Renderer {
         }
 
         recordingCmds = true;
+
         mainPass.begin(commandBuffer, stack);
 
         resetDynamicState(commandBuffer);
@@ -581,6 +585,7 @@ public class Renderer {
         destroySyncObjects();
 
         drawer.cleanUpResources();
+        shadowPass.cleanUp();
         mainPass.cleanUp();
         swapChain.cleanUp();
 
@@ -662,6 +667,10 @@ public class Renderer {
 
     public MainPass getMainPass() {
         return this.mainPass;
+    }
+
+    public ShadowPass getShadowPass() {
+        return this.shadowPass;
     }
 
     public SwapChain getSwapChain() {

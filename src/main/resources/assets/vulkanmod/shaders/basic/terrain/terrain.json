@@ -3,7 +3,8 @@
     "fragment": "terrain",
     "samplers": [
         { "name": "Sampler0" },
-        { "name": "Sampler2" }
+        { "name": "Sampler2" },
+        { "name": "Sampler3", "layout": "depth" }
     ],
     "UBOs": [
         { "type":  "vertex", "binding": 0, "fields": [
@@ -17,7 +18,8 @@
             { "name": "FogRenderDistanceEnd", "type": "float", "count": 1, "values": [ 1.0 ] },
             { "name": "FogSkyEnd", "type": "float", "count": 1, "values": [ 1.0 ] },
             { "name": "FogCloudsEnd", "type": "float", "count": 1, "values": [ 1.0 ] },
-            { "name": "AlphaCutout", "type": "float", "count": 1, "values": [ 1.0 ] }
+            { "name": "AlphaCutout", "type": "float", "count": 1, "values": [ 1.0 ] },
+            { "name": "LightSpaceMat", "type": "matrix4x4", "count": 16, "values": [ 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0 ] }
         ] }
     ],
     "PushConstants": [
