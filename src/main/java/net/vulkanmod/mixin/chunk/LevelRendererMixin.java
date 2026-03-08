@@ -123,6 +123,7 @@ public abstract class LevelRendererMixin {
                 ShadowPass shadowPass = Renderer.getInstance().getShadowPass();
                 shadowPass.begin(Renderer.getCommandBuffer(), stack);
                 this.worldRenderer.renderShadowTerrain(camX, camY, camZ);
+                this.worldRenderer.renderEntityShadows(camX, camY, camZ);
                 shadowPass.end(Renderer.getCommandBuffer());
             }
 
