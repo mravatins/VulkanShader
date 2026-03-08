@@ -32,7 +32,7 @@ float computeShadow(vec3 pos) {
     vec4 lightSpacePos = LightSpaceMat * vec4(pos, 1.0);
     vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
     vec2 shadowCoords = projCoords.xy * 0.5 + 0.5;
-    float currentDepth = projCoords.z; // already in [0, 1]: Vulkan/GL_ZERO_TO_ONE convention
+    float currentDepth = projCoords.z;
 
     if (shadowCoords.x < 0.0 || shadowCoords.x > 1.0 ||
         shadowCoords.y < 0.0 || shadowCoords.y > 1.0 ||

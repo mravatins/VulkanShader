@@ -5,7 +5,9 @@ import com.mojang.blaze3d.opengl.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.blaze3d.vertex.VertexFormat;
+import net.minecraft.client.renderer.RenderType;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import net.minecraft.client.Camera;
@@ -31,7 +33,6 @@ import net.minecraft.util.profiling.ProfilerFiller;
 import net.minecraft.util.profiling.Zone;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.vulkanmod.Initializer;
 import net.vulkanmod.render.PipelineManager;
@@ -395,43 +396,37 @@ public class WorldRenderer {
 
         java.nio.ByteBuffer buf = ENTITY_SHADOW_BUF;
         buf.clear();
-        int vertexCount = 0;
+
+        ShadowVertexConsumer shadowConsumer = new ShadowVertexConsumer(buf);
+        ShadowNodeCollector nodeCollector = new ShadowNodeCollector(shadowConsumer);
+
+        PoseStack poseStack = new PoseStack();
+        net.minecraft.client.renderer.state.CameraRenderState cameraState = new net.minecraft.client.renderer.state.CameraRenderState();
+        cameraState.pos = new Vec3(camX, camY, camZ);
+        cameraState.blockPos = net.minecraft.core.BlockPos.containing(camX, camY, camZ);
+        cameraState.initialized = true;
+        cameraState.entityPos = cameraState.pos;
+        cameraState.orientation = new org.joml.Quaternionf();
 
         for (Entity entity : level.entitiesForRendering()) {
             if (entity.isInvisible() || entity.isSpectator()) continue;
-            AABB box = entity.getBoundingBox();
 
-            float x0 = (float)(box.minX - camX);
-            float y0 = (float)(box.minY - camY);
-            float z0 = (float)(box.minZ - camZ);
-            float x1 = (float)(box.maxX - camX);
-            float y1 = (float)(box.maxY - camY);
-            float z1 = (float)(box.maxZ - camZ);
+            double dx = entity.getX() - camX;
+            double dy = entity.getY() - camY;
+            double dz = entity.getZ() - camZ;
 
-            if (buf.remaining() < 6 * 4 * 12) break; // guard overflow
+            try {
+                var renderState = this.entityRenderDispatcher.extractEntity(entity, this.partialTick);
+                poseStack.pushPose();
+                this.entityRenderDispatcher.submit(renderState, cameraState, dx, dy, dz, poseStack, nodeCollector);
+                poseStack.popPose();
+            } catch (Exception ignored) {
+            }
 
-            // Top face (y1)
-            putVec3(buf, x0, y1, z0); putVec3(buf, x1, y1, z0);
-            putVec3(buf, x1, y1, z1); putVec3(buf, x0, y1, z1);
-            // Bottom face (y0)
-            putVec3(buf, x0, y0, z1); putVec3(buf, x1, y0, z1);
-            putVec3(buf, x1, y0, z0); putVec3(buf, x0, y0, z0);
-            // +X face
-            putVec3(buf, x1, y0, z1); putVec3(buf, x1, y1, z1);
-            putVec3(buf, x1, y1, z0); putVec3(buf, x1, y0, z0);
-            // -X face
-            putVec3(buf, x0, y0, z0); putVec3(buf, x0, y1, z0);
-            putVec3(buf, x0, y1, z1); putVec3(buf, x0, y0, z1);
-            // +Z face
-            putVec3(buf, x0, y0, z1); putVec3(buf, x0, y1, z1);
-            putVec3(buf, x1, y1, z1); putVec3(buf, x1, y0, z1);
-            // -Z face
-            putVec3(buf, x1, y0, z0); putVec3(buf, x1, y1, z0);
-            putVec3(buf, x0, y1, z0); putVec3(buf, x0, y0, z0);
-
-            vertexCount += 24;
+            if (buf.remaining() < 1024) break;
         }
 
+        int vertexCount = shadowConsumer.getVertexCount();
         if (vertexCount > 0) {
             buf.flip();
             Drawer drawer = Renderer.getDrawer();
@@ -439,8 +434,79 @@ public class WorldRenderer {
         }
     }
 
-    private static void putVec3(java.nio.ByteBuffer buf, float x, float y, float z) {
-        buf.putFloat(x).putFloat(y).putFloat(z);
+    private static class ShadowVertexConsumer implements VertexConsumer {
+        private final java.nio.ByteBuffer buffer;
+        private int vertexCount;
+
+        ShadowVertexConsumer(java.nio.ByteBuffer buffer) {
+            this.buffer = buffer;
+        }
+
+        int getVertexCount() { return vertexCount; }
+
+        @Override
+        public VertexConsumer addVertex(float x, float y, float z) {
+            if (buffer.remaining() >= 12) {
+                buffer.putFloat(x).putFloat(y).putFloat(z);
+                vertexCount++;
+            }
+            return this;
+        }
+
+        @Override public VertexConsumer setColor(int r, int g, int b, int a) { return this; }
+        @Override public VertexConsumer setUv(float u, float v) { return this; }
+        @Override public VertexConsumer setUv1(int u, int v) { return this; }
+        @Override public VertexConsumer setUv2(int u, int v) { return this; }
+        @Override public VertexConsumer setNormal(float x, float y, float z) { return this; }
+    }
+
+    private static class ShadowNodeCollector implements net.minecraft.client.renderer.SubmitNodeCollector {
+        private final ShadowVertexConsumer consumer;
+
+        ShadowNodeCollector(ShadowVertexConsumer consumer) {
+            this.consumer = consumer;
+        }
+
+        @Override
+        public net.minecraft.client.renderer.OrderedSubmitNodeCollector order(int i) {
+            return this;
+        }
+
+        @Override
+        public <S> void submitModel(net.minecraft.client.model.Model<? super S> model, S state,
+                                     PoseStack poseStack, RenderType renderType, int light, int overlay, int color,
+                                     net.minecraft.client.renderer.texture.TextureAtlasSprite sprite, int i,
+                                     net.minecraft.client.renderer.feature.ModelFeatureRenderer.CrumblingOverlay crumblingOverlay) {
+            model.renderToBuffer(poseStack, consumer, light, overlay);
+        }
+
+        @Override
+        public void submitModelPart(net.minecraft.client.model.geom.ModelPart part, PoseStack poseStack,
+                                     RenderType renderType, int light, int overlay,
+                                     net.minecraft.client.renderer.texture.TextureAtlasSprite sprite,
+                                     boolean bl, boolean bl2, int color,
+                                     net.minecraft.client.renderer.feature.ModelFeatureRenderer.CrumblingOverlay crumblingOverlay, int i) {
+            part.render(poseStack, consumer, light, overlay);
+        }
+
+        @Override
+        public void submitCustomGeometry(PoseStack poseStack, RenderType renderType,
+                                          net.minecraft.client.renderer.SubmitNodeCollector.CustomGeometryRenderer renderer) {
+            renderer.render(poseStack.last(), consumer);
+        }
+
+        // No-op for everything else
+        @Override public void submitHitbox(PoseStack ps, net.minecraft.client.renderer.entity.state.EntityRenderState s, net.minecraft.client.renderer.entity.state.HitboxesRenderState h) {}
+        @Override public void submitShadow(PoseStack ps, float f, java.util.List<net.minecraft.client.renderer.entity.state.EntityRenderState.ShadowPiece> l) {}
+        @Override public void submitNameTag(PoseStack ps, Vec3 v, int i, net.minecraft.network.chat.Component c, boolean b, int j, double d, net.minecraft.client.renderer.state.CameraRenderState cs) {}
+        @Override public void submitText(PoseStack ps, float f1, float f2, net.minecraft.util.FormattedCharSequence seq, boolean b, net.minecraft.client.gui.Font.DisplayMode dm, int i, int j, int k, int l) {}
+        @Override public void submitFlame(PoseStack ps, net.minecraft.client.renderer.entity.state.EntityRenderState s, org.joml.Quaternionf q) {}
+        @Override public void submitLeash(PoseStack ps, net.minecraft.client.renderer.entity.state.EntityRenderState.LeashState ls) {}
+        @Override public void submitBlock(PoseStack ps, net.minecraft.world.level.block.state.BlockState bs, int i, int j, int k) {}
+        @Override public void submitMovingBlock(PoseStack ps, net.minecraft.client.renderer.block.MovingBlockRenderState mrs) {}
+        @Override public void submitBlockModel(PoseStack ps, RenderType rt, net.minecraft.client.renderer.block.model.BlockStateModel bsm, float f1, float f2, float f3, int i, int j, int k) {}
+        @Override public void submitItem(PoseStack ps, net.minecraft.world.item.ItemDisplayContext idc, int i, int j, int k, int[] ia, java.util.List<net.minecraft.client.renderer.block.model.BakedQuad> quads, RenderType rt, net.minecraft.client.renderer.item.ItemStackRenderState.FoilType ft) {}
+        @Override public void submitParticleGroup(net.minecraft.client.renderer.SubmitNodeCollector.ParticleGroupRenderer pgr) {}
     }
 
     public void renderSectionLayer(TerrainRenderType renderType, double camX, double camY, double camZ, Matrix4f modelView, Matrix4f projection) {
