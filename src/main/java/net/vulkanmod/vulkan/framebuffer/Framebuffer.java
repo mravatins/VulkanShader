@@ -93,6 +93,8 @@ public class Framebuffer {
                 attachments = stack.longs(colorAttachment.getImageView(), depthAttachment.getImageView());
             } else if (colorAttachment != null) {
                 attachments = stack.longs(colorAttachment.getImageView());
+            } else if (depthAttachment != null) {
+                attachments = stack.longs(depthAttachment.getImageView());
             } else {
                 throw new IllegalStateException();
             }
@@ -277,6 +279,12 @@ public class Framebuffer {
 
         public Builder setDepthLinearFiltering(boolean b) {
             this.depthLinearFiltering = b;
+
+            return this;
+        }
+
+        public Builder setDepthFormat(int format) {
+            this.depthFormat = format;
 
             return this;
         }

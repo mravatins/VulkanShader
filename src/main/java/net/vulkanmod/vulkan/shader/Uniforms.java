@@ -21,16 +21,18 @@ public class Uniforms {
 
     public static void setupDefaultUniforms() {
 
-        //Mat4
+        // Mat4
         mat4f_uniformMap.put("ModelViewMat", VRenderSystem::getModelViewMatrix);
         mat4f_uniformMap.put("ProjMat", VRenderSystem::getProjectionMatrix);
         mat4f_uniformMap.put("MVP", VRenderSystem::getMVP);
         mat4f_uniformMap.put("TextureMat", VRenderSystem::getTextureMatrix);
+        mat4f_uniformMap.put("LightSpaceMat", VRenderSystem::getLightSpaceMatrix);
+        mat4f_uniformMap.put("InvProjMat", VRenderSystem::getInverseProjectionMatrix);
 
-        //Vec1i
+        // Vec1i
         vec1i_uniformMap.put("EndPortalLayers", () -> 15);
 
-        //Vec1
+        // Vec1
         vec1f_uniformMap.put("FogStart", () -> VRenderSystem.getFogData().renderDistanceStart);
         vec1f_uniformMap.put("FogEnd", () -> VRenderSystem.getFogData().renderDistanceEnd);
         vec1f_uniformMap.put("FogEnvironmentalStart", () -> VRenderSystem.getFogData().environmentalStart);
@@ -41,19 +43,21 @@ public class Uniforms {
         vec1f_uniformMap.put("FogCloudsEnd", () -> VRenderSystem.getFogData().cloudEnd);
         vec1f_uniformMap.put("LineWidth", RenderSystem::getShaderLineWidth);
         vec1f_uniformMap.put("AlphaCutout", () -> VRenderSystem.alphaCutout);
+        vec1f_uniformMap.put("Time", VRenderSystem::getTime);
 
-        //Vec2
+        // Vec2
         vec2f_uniformMap.put("ScreenSize", VRenderSystem::getScreenSize);
 
-        //Vec3
-        vec3f_uniformMap.put("Light0_Direction", () -> VRenderSystem.lightDirection0);
-        vec3f_uniformMap.put("Light1_Direction", () -> VRenderSystem.lightDirection1);
+        // Vec3
         vec3f_uniformMap.put("ModelOffset", () -> VRenderSystem.modelOffset);
         vec3f_uniformMap.put("ChunkOffset", () -> VRenderSystem.modelOffset);
+        vec3f_uniformMap.put("CamPos", VRenderSystem::getCameraWorldPos);
 
-        //Vec4
+        // Vec4
         vec4f_uniformMap.put("ColorModulator", VRenderSystem::getShaderColor);
         vec4f_uniformMap.put("FogColor", VRenderSystem::getShaderFogColor);
+        vec4f_uniformMap.put("Light0_Direction", () -> VRenderSystem.lightDirection0);
+        vec4f_uniformMap.put("Light1_Direction", () -> VRenderSystem.lightDirection1);
 
     }
 

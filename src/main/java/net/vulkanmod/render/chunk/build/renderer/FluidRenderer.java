@@ -62,7 +62,8 @@ public class FluidRenderer implements FluidRendering.DefaultRenderer {
 
         TerrainRenderType renderType = TerrainRenderType.get(ItemBlockRenderTypes.getRenderLayer(fluidState));
         renderType = TerrainRenderType.getRemapped(renderType);
-        TerrainBufferBuilder bufferBuilder = this.resources.builderPack.builder(renderType).getBufferBuilder(QuadFacing.UNDEFINED.ordinal());
+        TerrainBufferBuilder bufferBuilder = this.resources.builderPack.builder(renderType)
+                .getBufferBuilder(QuadFacing.UNDEFINED.ordinal());
 
         // Fallback to water/lava in case there's no handler
         if (handler == null) {
@@ -70,10 +71,12 @@ public class FluidRenderer implements FluidRendering.DefaultRenderer {
             handler = FluidRenderHandlerRegistry.INSTANCE.get(isLava ? Fluids.LAVA : Fluids.WATER);
         }
 
-        FluidRendering.render(handler, this.resources.getRegion(),blockPos, bufferBuilder, blockState, fluidState, this);
+        FluidRendering.render(handler, this.resources.getRegion(), blockPos, bufferBuilder, blockState, fluidState,
+                this);
     }
 
-    private boolean isFaceOccludedByState(BlockGetter blockGetter, float h, Direction direction, BlockPos blockPos, BlockState blockState) {
+    private boolean isFaceOccludedByState(BlockGetter blockGetter, float h, Direction direction, BlockPos blockPos,
+            BlockState blockState) {
         mBlockPos.set(blockPos).offset(Direction.DOWN.getUnitVec3i());
 
         if (blockState.canOcclude()) {
@@ -92,7 +95,8 @@ public class FluidRenderer implements FluidRendering.DefaultRenderer {
         }
     }
 
-    public static boolean shouldRenderFace(BlockAndTintGetter blockAndTintGetter, BlockPos blockPos, FluidState fluidState, BlockState blockState, Direction direction, BlockState adjBlockState) {
+    public static boolean shouldRenderFace(BlockAndTintGetter blockAndTintGetter, BlockPos blockPos,
+            FluidState fluidState, BlockState blockState, Direction direction, BlockState adjBlockState) {
 
         if (adjBlockState.getFluidState().getType().isSame(fluidState.getType()))
             return false;
@@ -110,11 +114,13 @@ public class FluidRenderer implements FluidRendering.DefaultRenderer {
         return blockAndTintGetter.getBlockState(mBlockPos);
     }
 
-    public void render(FluidRenderHandler handler, BlockAndTintGetter world, BlockPos pos, VertexConsumer vertexConsumer, BlockState blockState, FluidState fluidState) {
+    public void render(FluidRenderHandler handler, BlockAndTintGetter world, BlockPos pos,
+            VertexConsumer vertexConsumer, BlockState blockState, FluidState fluidState) {
         render(handler, blockState, fluidState, pos, (TerrainBufferBuilder) vertexConsumer);
     }
 
-    public void render(FluidRenderHandler handler, BlockState blockState, FluidState fluidState, BlockPos blockPos, TerrainBufferBuilder bufferBuilder) {
+    public void render(FluidRenderHandler handler, BlockState blockState, FluidState fluidState, BlockPos blockPos,
+            TerrainBufferBuilder bufferBuilder) {
         BlockAndTintGetter region = this.resources.getRegion();
 
         int color = handler.getFluidColor(region, blockPos, fluidState);
@@ -138,7 +144,7 @@ public class FluidRenderer implements FluidRendering.DefaultRenderer {
         BlockState westState = getAdjBlockState(region, posX, posY, posZ, Direction.WEST);
         BlockState eastState = getAdjBlockState(region, posX, posY, posZ, Direction.EAST);
 
-//        boolean rUf = !isNeighborSameFluid(fluidState, upFluid);
+        // boolean rUf = !isNeighborSameFluid(fluidState, upFluid);
         boolean rUf = shouldRenderFace(region, blockPos, fluidState, blockState, Direction.UP, upState);
         boolean rDf = shouldRenderFace(region, blockPos, fluidState, blockState, Direction.DOWN, downState)
                 && !isFaceOccludedByState(region, MAX_FLUID_HEIGHT, Direction.DOWN, blockPos, downState);
@@ -164,25 +170,34 @@ public class FluidRenderer implements FluidRendering.DefaultRenderer {
             seHeight = 1.0F;
             swHeight = 1.0F;
         } else {
-            float s = this.getHeight(region, fluid, mBlockPos.set(blockPos).offset(Direction.NORTH.getUnitVec3i()), northState);
-            float t = this.getHeight(region, fluid, mBlockPos.set(blockPos).offset(Direction.SOUTH.getUnitVec3i()), southState);
-            float u = this.getHeight(region, fluid, mBlockPos.set(blockPos).offset(Direction.EAST.getUnitVec3i()), eastState);
-            float v = this.getHeight(region, fluid, mBlockPos.set(blockPos).offset(Direction.WEST.getUnitVec3i()), westState);
-            neHeight = this.calculateAverageHeight(region, fluid, height, s, u, mBlockPos.set(blockPos).offset(Direction.NORTH.getUnitVec3i()).offset(Direction.EAST.getUnitVec3i()));
-            nwHeight = this.calculateAverageHeight(region, fluid, height, s, v, mBlockPos.set(blockPos).offset(Direction.NORTH.getUnitVec3i()).offset(Direction.WEST.getUnitVec3i()));
-            seHeight = this.calculateAverageHeight(region, fluid, height, t, u, mBlockPos.set(blockPos).offset(Direction.SOUTH.getUnitVec3i()).offset(Direction.EAST.getUnitVec3i()));
-            swHeight = this.calculateAverageHeight(region, fluid, height, t, v, mBlockPos.set(blockPos).offset(Direction.SOUTH.getUnitVec3i()).offset(Direction.WEST.getUnitVec3i()));
+            float s = this.getHeight(region, fluid, mBlockPos.set(blockPos).offset(Direction.NORTH.getUnitVec3i()),
+                    northState);
+            float t = this.getHeight(region, fluid, mBlockPos.set(blockPos).offset(Direction.SOUTH.getUnitVec3i()),
+                    southState);
+            float u = this.getHeight(region, fluid, mBlockPos.set(blockPos).offset(Direction.EAST.getUnitVec3i()),
+                    eastState);
+            float v = this.getHeight(region, fluid, mBlockPos.set(blockPos).offset(Direction.WEST.getUnitVec3i()),
+                    westState);
+            neHeight = this.calculateAverageHeight(region, fluid, height, s, u, mBlockPos.set(blockPos)
+                    .offset(Direction.NORTH.getUnitVec3i()).offset(Direction.EAST.getUnitVec3i()));
+            nwHeight = this.calculateAverageHeight(region, fluid, height, s, v, mBlockPos.set(blockPos)
+                    .offset(Direction.NORTH.getUnitVec3i()).offset(Direction.WEST.getUnitVec3i()));
+            seHeight = this.calculateAverageHeight(region, fluid, height, t, u, mBlockPos.set(blockPos)
+                    .offset(Direction.SOUTH.getUnitVec3i()).offset(Direction.EAST.getUnitVec3i()));
+            swHeight = this.calculateAverageHeight(region, fluid, height, t, v, mBlockPos.set(blockPos)
+                    .offset(Direction.SOUTH.getUnitVec3i()).offset(Direction.WEST.getUnitVec3i()));
         }
 
         float x0 = (posX & 15);
         float y0 = (posY & 15);
         float z0 = (posZ & 15);
-//            float x = 0.001F;
+        // float x = 0.001F;
         float y = rDf ? 0.001F : 0.0F;
 
         modelQuad.setFlags(0);
 
-        if (rUf && !isFaceOccludedByState(region, Math.min(Math.min(nwHeight, swHeight), Math.min(seHeight, neHeight)), Direction.UP, blockPos, upState)) {
+        if (rUf && !isFaceOccludedByState(region, Math.min(Math.min(nwHeight, swHeight), Math.min(seHeight, neHeight)),
+                Direction.UP, blockPos, upState)) {
             float u0, u1, u2, u3;
             float v0, v1, v2, v3;
 
@@ -382,7 +397,8 @@ public class FluidRenderer implements FluidRendering.DefaultRenderer {
         }
     }
 
-    private float calculateAverageHeight(BlockAndTintGetter blockAndTintGetter, Fluid fluid, float f, float g, float h, BlockPos blockPos) {
+    private float calculateAverageHeight(BlockAndTintGetter blockAndTintGetter, Fluid fluid, float f, float g, float h,
+            BlockPos blockPos) {
         if (!(h >= 1.0F) && !(g >= 1.0F)) {
             float[] fs = new float[2];
             if (h > 0.0F || g > 0.0F) {
@@ -419,7 +435,8 @@ public class FluidRenderer implements FluidRendering.DefaultRenderer {
         return this.getHeight(blockAndTintGetter, fluid, blockPos, blockState);
     }
 
-    private float getHeight(BlockAndTintGetter blockAndTintGetter, Fluid fluid, BlockPos blockPos, BlockState adjBlockState) {
+    private float getHeight(BlockAndTintGetter blockAndTintGetter, Fluid fluid, BlockPos blockPos,
+            BlockState adjBlockState) {
         FluidState adjFluidState = adjBlockState.getFluidState();
         if (fluid.isSame(adjFluidState.getType())) {
             BlockState blockState2 = blockAndTintGetter.getBlockState(blockPos.offset(Direction.UP.getUnitVec3i()));
@@ -438,7 +455,8 @@ public class FluidRenderer implements FluidRendering.DefaultRenderer {
         return I32_SNorm.packNormal(normal.x(), normal.y(), normal.z());
     }
 
-    private void putQuad(ModelQuad quad, TerrainBufferBuilder bufferBuilder, float xOffset, float yOffset, float zOffset, boolean flip) {
+    private void putQuad(ModelQuad quad, TerrainBufferBuilder bufferBuilder, float xOffset, float yOffset,
+            float zOffset, boolean flip) {
         QuadLightData quadLightData = resources.quadLightData;
 
         // Rotate triangles if needed to fix AO anisotropy

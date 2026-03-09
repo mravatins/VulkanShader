@@ -21,8 +21,9 @@ public abstract class PipelineManager {
     }
 
     static GraphicsPipeline
-            terrainShader, terrainShaderEarlyZ,
-            fastBlitPipeline, cloudsPipeline;
+            terrainShader, terrainShaderEarlyZ, waterShader,
+            fastBlitPipeline, cloudsPipeline,
+            shadowTerrainShader, shadowEntityShader;
 
     private static Function<TerrainRenderType, GraphicsPipeline> shaderGetter;
 
@@ -35,14 +36,17 @@ public abstract class PipelineManager {
 
     public static void setDefaultShader() {
         setShaderGetter(
-                renderType -> renderType == TerrainRenderType.TRANSLUCENT ? terrainShaderEarlyZ : terrainShader);
+                renderType -> renderType == TerrainRenderType.TRANSLUCENT ? waterShader : terrainShader);
     }
 
     private static void createBasicPipelines() {
         terrainShaderEarlyZ = createPipeline("terrain_earlyZ", terrainVertexFormat);
         terrainShader = createPipeline("terrain", terrainVertexFormat);
+        waterShader = createPipeline("terrain_water", terrainVertexFormat);
         fastBlitPipeline = createPipeline("blit", CustomVertexFormat.NONE);
         cloudsPipeline = createPipeline("clouds", DefaultVertexFormat.POSITION_COLOR);
+        shadowTerrainShader = createPipeline("shadow", terrainVertexFormat);
+        shadowEntityShader = createPipeline("entity_shadow", DefaultVertexFormat.POSITION);
     }
 
     private static GraphicsPipeline createPipeline(String configName, VertexFormat vertexFormat) {
@@ -87,10 +91,21 @@ public abstract class PipelineManager {
         return cloudsPipeline;
     }
 
+    public static GraphicsPipeline getShadowTerrainShader() {
+        return shadowTerrainShader;
+    }
+
+    public static GraphicsPipeline getShadowEntityShader() {
+        return shadowEntityShader;
+    }
+
     public static void destroyPipelines() {
         terrainShaderEarlyZ.cleanUp();
         terrainShader.cleanUp();
+        waterShader.cleanUp();
         fastBlitPipeline.cleanUp();
         cloudsPipeline.cleanUp();
+        shadowTerrainShader.cleanUp();
+        shadowEntityShader.cleanUp();
     }
 }
