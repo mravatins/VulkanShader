@@ -322,7 +322,7 @@ public class WorldRenderer {
     public void renderShadowTerrain(double camX, double camY, double camZ) {
         Renderer renderer = Renderer.getInstance();
 
-        VRenderSystem.enableCull();
+        VRenderSystem.disableCull();
         VRenderSystem.depthFunc(org.lwjgl.opengl.GL11.GL_LEQUAL);
         GlStateManager._enableDepthTest();
         GlStateManager._depthMask(true);
@@ -552,7 +552,11 @@ public class WorldRenderer {
         RenderSystem.setShaderTexture(2, Minecraft.getInstance().gameRenderer.lightTexture().getTextureView());
 
         VTextureSelector.bindShaderTextures(pipeline);
-        VTextureSelector.bindTexture(3, Renderer.getInstance().getShadowPass().getShadowMap());
+        if (renderType == TerrainRenderType.TRANSLUCENT) {
+            VTextureSelector.bindTexture(3, net.vulkanmod.vulkan.VRenderSystem.sceneColorImage);
+        } else {
+            VTextureSelector.bindTexture(3, Renderer.getInstance().getShadowPass().getShadowMap());
+        }
 
         IndexBuffer indexBuffer = Renderer.getDrawer().getQuadsIndexBuffer().getIndexBuffer();
         Renderer.getDrawer().bindIndexBuffer(Renderer.getCommandBuffer(), indexBuffer, indexBuffer.indexType.value);
@@ -685,6 +689,10 @@ public class WorldRenderer {
 
     public void setPartialTick(float partialTick) {
         this.partialTick = partialTick;
+    }
+
+    public float getPartialTick() {
+        return this.partialTick;
     }
 
     public void scheduleGraphUpdate() {

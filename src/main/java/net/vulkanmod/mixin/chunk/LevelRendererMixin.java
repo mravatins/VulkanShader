@@ -24,6 +24,7 @@ import net.vulkanmod.render.chunk.WorldRenderer;
 import net.vulkanmod.render.profiling.Profiler;
 import net.vulkanmod.render.vertex.TerrainRenderType;
 import net.vulkanmod.vulkan.Renderer;
+import net.vulkanmod.vulkan.VRenderSystem;
 import net.vulkanmod.vulkan.pass.ShadowPass;
 import org.lwjgl.system.MemoryStack;
 import org.joml.Matrix4f;
@@ -39,19 +40,25 @@ import java.util.SortedSet;
 
 @Mixin(LevelRenderer.class)
 public abstract class LevelRendererMixin {
-    @Shadow @Final private Long2ObjectMap<SortedSet<BlockDestructionProgress>> destructionProgress;
+    @Shadow
+    @Final
+    private Long2ObjectMap<SortedSet<BlockDestructionProgress>> destructionProgress;
 
-    @Unique private WorldRenderer worldRenderer;
+    @Unique
+    private WorldRenderer worldRenderer;
 
-    @Unique double camX, camY, camZ;
-    @Unique Matrix4f modelView, projection;
+    @Unique
+    double camX, camY, camZ;
+    @Unique
+    Matrix4f modelView, projection;
 
     @Inject(method = "<init>", at = @At("RETURN"))
     private void init(Minecraft minecraft, EntityRenderDispatcher entityRenderDispatcher,
-                      BlockEntityRenderDispatcher blockEntityRenderDispatcher, RenderBuffers renderBuffers,
-                      LevelRenderState levelRenderState, FeatureRenderDispatcher featureRenderDispatcher,
-                      CallbackInfo ci) {
-        this.worldRenderer = WorldRenderer.init(entityRenderDispatcher, blockEntityRenderDispatcher, renderBuffers, levelRenderState, featureRenderDispatcher);
+            BlockEntityRenderDispatcher blockEntityRenderDispatcher, RenderBuffers renderBuffers,
+            LevelRenderState levelRenderState, FeatureRenderDispatcher featureRenderDispatcher,
+            CallbackInfo ci) {
+        this.worldRenderer = WorldRenderer.init(entityRenderDispatcher, blockEntityRenderDispatcher, renderBuffers,
+                levelRenderState, featureRenderDispatcher);
     }
 
     @Inject(method = "setLevel", at = @At("RETURN"))
@@ -66,7 +73,7 @@ public abstract class LevelRendererMixin {
 
     @Inject(method = "extractVisibleBlockEntities", at = @At("HEAD"), cancellable = true)
     private void onExtractVisibleBlockEntities(Camera camera, float partialTick, LevelRenderState levelRenderState,
-                                               CallbackInfo ci) {
+            CallbackInfo ci) {
         this.worldRenderer.setPartialTick(partialTick);
 
         ci.cancel();
@@ -74,8 +81,9 @@ public abstract class LevelRendererMixin {
 
     @Inject(method = "submitBlockEntities", at = @At(value = "RETURN"), cancellable = true)
     private void onSubmitBlockEntities(PoseStack poseStack, LevelRenderState levelRenderState,
-                                     SubmitNodeStorage submitNodeStorage, CallbackInfo ci) {
-        this.worldRenderer.renderBlockEntities(poseStack, levelRenderState, submitNodeStorage, this.destructionProgress);
+            SubmitNodeStorage submitNodeStorage, CallbackInfo ci) {
+        this.worldRenderer.renderBlockEntities(poseStack, levelRenderState, submitNodeStorage,
+                this.destructionProgress);
 
         ci.cancel();
     }
@@ -101,8 +109,8 @@ public abstract class LevelRendererMixin {
 
     @Inject(method = "renderLevel", at = @At("HEAD"))
     private void updateMatrices(GraphicsResourceAllocator graphicsResourceAllocator, DeltaTracker deltaTracker,
-                                boolean bl, Camera camera, Matrix4f modelView, Matrix4f projection, Matrix4f matrix4f,
-                                GpuBufferSlice gpuBufferSlice, Vector4f vector4f, boolean bl2, CallbackInfo ci) {
+            boolean bl, Camera camera, Matrix4f modelView, Matrix4f projection, Matrix4f matrix4f,
+            GpuBufferSlice gpuBufferSlice, Vector4f vector4f, boolean bl2, CallbackInfo ci) {
         this.modelView = modelView;
         this.projection = projection;
     }
@@ -134,14 +142,25 @@ public abstract class LevelRendererMixin {
 
             this.worldRenderer.renderSectionLayer(TerrainRenderType.SOLID, camX, camY, camZ, modelView, projection);
             this.worldRenderer.renderSectionLayer(TerrainRenderType.CUTOUT, camX, camY, camZ, modelView, projection);
-            this.worldRenderer.renderSectionLayer(TerrainRenderType.CUTOUT_MIPPED, camX, camY, camZ, modelView, projection);
-        }
-        else if (chunkSectionLayerGroup == ChunkSectionLayerGroup.TRANSLUCENT) {
+            this.worldRenderer.renderSectionLayer(TerrainRenderType.CUTOUT_MIPPED, camX, camY, camZ, modelView,
+                    projection);
+        } else if (chunkSectionLayerGroup == ChunkSectionLayerGroup.TRANSLUCENT) {
             Profiler profiler = Profiler.getMainProfiler();
             profiler.pop();
             profiler.push("Translucent_terrain");
 
-            this.worldRenderer.renderSectionLayer(TerrainRenderType.TRANSLUCENT, camX, camY, camZ, modelView, projection);
+            // Capture Scene Color for water reflections
+            if (net.vulkanmod.vulkan.VRenderSystem.sceneColorImage != null) {
+                net.vulkanmod.vulkan.texture.ImageUtil.blitFramebuffer(
+                        net.vulkanmod.vulkan.VRenderSystem.sceneColorImage,
+                        0, 0, net.vulkanmod.vulkan.Renderer.getInstance().getSwapChain().getWidth(),
+                        net.vulkanmod.vulkan.Renderer.getInstance().getSwapChain().getHeight(),
+                        0, 0, net.vulkanmod.vulkan.VRenderSystem.sceneColorImage.width,
+                        net.vulkanmod.vulkan.VRenderSystem.sceneColorImage.height);
+            }
+
+            this.worldRenderer.renderSectionLayer(TerrainRenderType.TRANSLUCENT, camX, camY, camZ, modelView,
+                    projection);
 
             profiler.pop();
         }

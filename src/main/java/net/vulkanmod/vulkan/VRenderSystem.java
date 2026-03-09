@@ -48,10 +48,28 @@ public abstract class VRenderSystem {
     public static MappedBuffer MVP = new MappedBuffer(16 * 4);
 
     public static MappedBuffer modelOffset = new MappedBuffer(3 * 4);
-    public static MappedBuffer lightDirection0 = new MappedBuffer(3 * 4);
-    public static MappedBuffer lightDirection1 = new MappedBuffer(3 * 4);
+    public static MappedBuffer lightDirection0 = new MappedBuffer(4 * 4);
+    public static MappedBuffer lightDirection1 = new MappedBuffer(4 * 4);
 
     public static MappedBuffer lightSpaceMatrix = new MappedBuffer(16 * 4);
+    public static MappedBuffer inverseProjectionMatrix = new MappedBuffer(16 * 4);
+
+    public static MappedBuffer cameraWorldPos = new MappedBuffer(3 * 4);
+
+    public static MappedBuffer getCameraWorldPos() {
+        net.minecraft.client.Camera cam = Minecraft.getInstance().gameRenderer.getMainCamera();
+        net.minecraft.world.phys.Vec3 pos = cam.getPosition();
+        VUtil.UNSAFE.putFloat(cameraWorldPos.ptr,     (float) pos.x);
+        VUtil.UNSAFE.putFloat(cameraWorldPos.ptr + 4, (float) pos.y);
+        VUtil.UNSAFE.putFloat(cameraWorldPos.ptr + 8, (float) pos.z);
+        return cameraWorldPos;
+    }
+
+    private static final long START_TIME_MS = System.currentTimeMillis();
+
+    public static float getTime() {
+        return (System.currentTimeMillis() - START_TIME_MS) / 1000.0f;
+    }
 
     static {
         new org.joml.Matrix4f().identity().get(lightSpaceMatrix.buffer.asFloatBuffer());
@@ -62,6 +80,22 @@ public abstract class VRenderSystem {
     public static FogData fogData;
 
     public static MappedBuffer screenSize = new MappedBuffer(2 * 4);
+
+    public static net.vulkanmod.vulkan.texture.VulkanImage sceneColorImage;
+
+    public static void createSceneColorImage(int width, int height, int format) {
+        if (sceneColorImage != null)
+            sceneColorImage.free();
+
+        sceneColorImage = net.vulkanmod.vulkan.texture.VulkanImage.builder(width, height)
+                .setName("SceneColor")
+                .setFormat(format)
+                .setUsage(org.lwjgl.vulkan.VK10.VK_IMAGE_USAGE_TRANSFER_DST_BIT
+                        | org.lwjgl.vulkan.VK10.VK_IMAGE_USAGE_SAMPLED_BIT)
+                .setLinearFiltering(true)
+                .setClamp(true)
+                .createVulkanImage();
+    }
 
     public static float alphaCutout = 0.0f;
 
@@ -111,6 +145,7 @@ public abstract class VRenderSystem {
 
     public static void applyProjectionMatrix(Matrix4f mat) {
         mat.get(projectionMatrix.buffer.asFloatBuffer());
+        mat.invert(new Matrix4f()).get(inverseProjectionMatrix.buffer.asFloatBuffer());
     }
 
     public static void applyProjectionMatrix(GpuBufferSlice bufferSlice) {
@@ -119,6 +154,11 @@ public abstract class VRenderSystem {
         Matrix4f matrix4f = new Matrix4f().set(byteBuffer);
 
         matrix4f.get(projectionMatrix.buffer.asFloatBuffer());
+        matrix4f.invert(new Matrix4f()).get(inverseProjectionMatrix.buffer.asFloatBuffer());
+    }
+
+    public static MappedBuffer getInverseProjectionMatrix() {
+        return inverseProjectionMatrix;
     }
 
     public static void calculateMVP() {
@@ -150,6 +190,14 @@ public abstract class VRenderSystem {
 
     public static MappedBuffer getLightSpaceMatrix() {
         return lightSpaceMatrix;
+    }
+
+    public static void setShaderLightDir(int index, float x, float y, float z) {
+        long ptr = (index == 0 ? lightDirection0 : lightDirection1).ptr;
+        VUtil.UNSAFE.putFloat(ptr, x);
+        VUtil.UNSAFE.putFloat(ptr + 4, y);
+        VUtil.UNSAFE.putFloat(ptr + 8, z);
+        VUtil.UNSAFE.putFloat(ptr + 12, 0.0f);
     }
 
     public static void setModelOffset(float x, float y, float z) {
@@ -203,7 +251,7 @@ public abstract class VRenderSystem {
 
     public static void setPrimitiveTopologyGL(final int mode) {
         VRenderSystem.topology = switch (mode) {
-            case GL11.GL_LINES, GL11.GL_LINE_STRIP  -> VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+            case GL11.GL_LINES, GL11.GL_LINE_STRIP -> VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
             case GL11.GL_TRIANGLE_FAN, GL11.GL_TRIANGLES, GL11.GL_TRIANGLE_STRIP -> VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             default -> throw new RuntimeException(String.format("Unknown GL primitive topology: %s", mode));
         };

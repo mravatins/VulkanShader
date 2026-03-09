@@ -14,7 +14,8 @@ layout(binding = 1) uniform UBO {
     float FogSkyEnd;
     float FogCloudsEnd;
     float AlphaCutout;
-    // std140: 7 floats = 28 bytes after vec4, total 44 bytes -> implicit 4-byte pad -> mat4 at offset 48
+    vec4 Light0_Direction;
+    vec4 Light1_Direction;
     mat4 LightSpaceMat;
 };
 
@@ -28,8 +29,12 @@ layout(location = 4) in vec3 worldPos;
 
 layout(location = 0) out vec4 fragColor;
 
-float computeShadow(vec3 pos) {
-    vec4 lightSpacePos = LightSpaceMat * vec4(pos, 1.0);
+
+
+float computeShadow(vec3 pos, vec3 normal, vec3 lightDir) {
+    float biasMultiplier = sqrt(1.0 - clamp(dot(normal, lightDir), 0.0, 1.0));
+    vec3 biasedPos = pos + normal * 0.07 * biasMultiplier + lightDir * 0.01;
+    vec4 lightSpacePos = LightSpaceMat * vec4(biasedPos, 1.0);
     vec3 projCoords = lightSpacePos.xyz / lightSpacePos.w;
     vec2 shadowCoords = projCoords.xy * 0.5 + 0.5;
     float currentDepth = projCoords.z;
@@ -47,7 +52,26 @@ void main() {
     if (color.a < AlphaCutout) {
         discard;
     }
-    float shadow = computeShadow(worldPos);
+
+    // Reconstruct world-space normal for shadow bias (avoids acne on angled surfaces)
+    vec3 normal = normalize(cross(dFdy(worldPos), dFdx(worldPos)));
+
+    float shadow = computeShadow(worldPos, normal, Light0_Direction.xyz);
+    // vertexColor already encodes Minecraft's lightmap; just attenuate lit areas by shadow
     color.rgb *= 1.0 - 0.5 * shadow;
+
+    // --- ACES Tone Mapping ---
+    const float a = 2.51;
+    const float b = 0.03;
+    const float c = 2.43;
+    const float d = 0.59;
+    const float e = 0.14;
+    color.rgb = clamp((color.rgb * (a * color.rgb + b)) / (color.rgb * (c * color.rgb + d) + e), 0.0, 1.0);
+
+    // --- Color Grading ---
+    color.rgb = (color.rgb - 0.5) * 1.1 + 0.5;
+    float luma = dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
+    color.rgb = mix(vec3(luma), color.rgb, 1.25);
+
     fragColor = apply_fog(color, sphericalVertexDistance, cylindricalVertexDistance, FogEnvironmentalStart, FogEnvironmentalEnd, FogRenderDistanceStart, FogRenderDistanceEnd, FogColor);
 }

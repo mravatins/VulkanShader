@@ -64,7 +64,8 @@ public class TerrainBuilder {
         this.indexBufferPtr = ALLOCATOR.realloc(this.indexBufferPtr, i);
         LOGGER.debug("Needed to grow index buffer: Old size {} bytes, new size {} bytes.", this.indexBufferCapacity, i);
         if (this.indexBufferPtr == 0L) {
-            throw new OutOfMemoryError("Failed to resize buffer from " + this.indexBufferCapacity + " bytes to " + i + " bytes");
+            throw new OutOfMemoryError(
+                    "Failed to resize buffer from " + this.indexBufferCapacity + " bytes to " + i + " bytes");
         } else {
             this.indexBufferCapacity = i;
         }
@@ -172,7 +173,7 @@ public class TerrainBuilder {
     }
 
     public record DrawState(int vertexSize, int indexCount, VertexFormat.IndexType indexType,
-                            boolean indexOnly, boolean sequentialIndex) {
+            boolean indexOnly, boolean sequentialIndex) {
 
         private int indexBufferSize() {
             return this.sequentialIndex ? 0 : this.indexCount * this.indexType.bytes;

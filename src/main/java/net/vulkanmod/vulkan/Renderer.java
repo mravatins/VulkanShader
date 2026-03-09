@@ -574,6 +574,8 @@ public class Renderer {
         createSyncObjects();
         this.mainPass.onResize();
 
+        VRenderSystem.createSceneColorImage(swapChain.getWidth(), swapChain.getHeight(), swapChain.getFormat());
+
         this.onResizeCallbacks.forEach(Runnable::run);
         ((WindowAccessor) (Object) Minecraft.getInstance().getWindow()).getEventHandler().resizeDisplay();
 
@@ -591,6 +593,8 @@ public class Renderer {
 
         PipelineManager.destroyPipelines();
         VTextureSelector.getWhiteTexture().free();
+
+        if(VRenderSystem.sceneColorImage != null) VRenderSystem.sceneColorImage.free();
     }
 
     private void destroySyncObjects() {
