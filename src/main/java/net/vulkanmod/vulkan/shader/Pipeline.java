@@ -424,7 +424,13 @@ public abstract class Pipeline {
             String name = GsonHelper.getAsString(jsonobject, "name");
 
             int imageIdx = VTextureSelector.getTextureIdx(name);
-            this.imageDescriptors.add(new ImageDescriptor(this.nextBinding, "sampler2D", name, imageIdx));
+            ImageDescriptor descriptor = new ImageDescriptor(this.nextBinding, "sampler2D", name, imageIdx);
+
+            if (jsonobject.has("layout") && GsonHelper.getAsString(jsonobject, "layout").equals("depth")) {
+                descriptor.setLayout(VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL);
+            }
+
+            this.imageDescriptors.add(descriptor);
             this.nextBinding++;
         }
 

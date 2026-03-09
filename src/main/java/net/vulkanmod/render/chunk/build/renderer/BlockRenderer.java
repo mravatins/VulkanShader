@@ -108,7 +108,8 @@ public class BlockRenderer extends AbstractBlockRenderContext {
         }
     }
 
-    public void bufferQuad(TerrainBuilder terrainBuilder, Vector3f pos, ModelQuadView quad, QuadLightData quadLightData) {
+    public void bufferQuad(TerrainBuilder terrainBuilder, Vector3f pos, ModelQuadView quad,
+            QuadLightData quadLightData) {
         QuadFacing quadFacing = quad.getQuadFacing();
 
         if (renderType == TerrainRenderType.TRANSLUCENT || !this.backFaceCulling) {
@@ -148,4 +149,3 @@ public class BlockRenderer extends AbstractBlockRenderContext {
     }
 
 }
-
