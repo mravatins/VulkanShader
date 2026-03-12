@@ -95,6 +95,12 @@ public abstract class CompositeRenderTypeM {
                     }
                 }
 
+                // Always bind the shadow map to slot 3 so entity shaders that declare
+                // ShadowSampler (layout binding=3) can perform terrain-shadow lookups.
+                net.vulkanmod.vulkan.texture.VulkanImage shadowMap =
+                        net.vulkanmod.vulkan.Renderer.getInstance().getShadowPass().getShadowMap();
+                VTextureSelector.bindTexture(3, shadowMap);
+
                 VRenderSystem.applyModelViewMatrix(RenderSystem.getModelViewMatrix());
                 VRenderSystem.calculateMVP();
 

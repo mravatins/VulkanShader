@@ -12,7 +12,7 @@ public class SystemReportM {
 
 	@Inject(method = "appendToCrashReportString", at = @At("RETURN"))
 	private void addVulkanDevicesInfo(StringBuilder stringBuilder, CallbackInfo ci) {
-		stringBuilder.append("\n\n -- VulkanMod Device Report --");
+		stringBuilder.append("\n\n -- VulkanShader Device Report --");
 		stringBuilder.append(DeviceManager.getAvailableDevicesInfo());
 	}
 }

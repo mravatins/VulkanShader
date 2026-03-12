@@ -113,6 +113,8 @@ public abstract class LevelRendererMixin {
             GpuBufferSlice gpuBufferSlice, Vector4f vector4f, boolean bl2, CallbackInfo ci) {
         this.modelView = modelView;
         this.projection = projection;
+        // Store the camera-only view matrix so entity shaders can compute LightSpaceViewMat
+        VRenderSystem.setCameraViewMatrix(modelView);
     }
 
     @Overwrite

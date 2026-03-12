@@ -212,9 +212,9 @@ public class Vulkan {
             VkApplicationInfo appInfo = VkApplicationInfo.calloc(stack);
 
             appInfo.sType(VK_STRUCTURE_TYPE_APPLICATION_INFO);
-            appInfo.pApplicationName(stack.UTF8Safe("VulkanMod"));
+            appInfo.pApplicationName(stack.UTF8Safe("VulkanShader"));
             appInfo.applicationVersion(VK_MAKE_VERSION(1, 0, 0));
-            appInfo.pEngineName(stack.UTF8Safe("VulkanMod Engine"));
+            appInfo.pEngineName(stack.UTF8Safe("VulkanShader Engine"));
             appInfo.engineVersion(VK_MAKE_VERSION(1, 0, 0));
             appInfo.apiVersion(VK_API_VERSION_1_2);
 
@@ -414,4 +414,3 @@ public class Vulkan {
         return DeviceManager.device;
     }
 }
-
