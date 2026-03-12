@@ -104,6 +104,7 @@ public class ShadowPass {
 
         Matrix4f lightSpaceMat = worldLightVP.translate((float) camPos.x, (float) camPos.y, (float) camPos.z);
         lightSpaceMat.get(VRenderSystem.lightSpaceMatrix.buffer.asFloatBuffer());
+        VRenderSystem.recomputeLightSpaceViewMatrix();
     }
 
     public void begin(VkCommandBuffer commandBuffer, MemoryStack stack) {

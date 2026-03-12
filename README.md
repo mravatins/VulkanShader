@@ -44,4 +44,4 @@ Built jars are output to `build/libs/`.
 
 ## Credit
 
-Small credit to the original project: this started as a fork of [xCollateral/VulkanMod](https://github.com/xCollateral/VulkanMod).
+Credit to the original project: this started as a fork of [xCollateral/VulkanMod](https://github.com/xCollateral/VulkanMod).

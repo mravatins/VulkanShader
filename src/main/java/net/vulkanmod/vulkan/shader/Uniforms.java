@@ -27,6 +27,7 @@ public class Uniforms {
         mat4f_uniformMap.put("MVP", VRenderSystem::getMVP);
         mat4f_uniformMap.put("TextureMat", VRenderSystem::getTextureMatrix);
         mat4f_uniformMap.put("LightSpaceMat", VRenderSystem::getLightSpaceMatrix);
+        mat4f_uniformMap.put("LightSpaceViewMat", VRenderSystem::getLightSpaceViewMatrix);
         mat4f_uniformMap.put("InvProjMat", VRenderSystem::getInverseProjectionMatrix);
 
         // Vec1i

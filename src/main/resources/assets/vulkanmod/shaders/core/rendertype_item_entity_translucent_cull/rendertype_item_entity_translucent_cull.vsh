@@ -58,6 +58,10 @@ layout(std140) uniform Projection {
     mat4 ProjMat;
 };
 
+layout(std140) uniform ShadowBlock {
+    mat4 LightSpaceViewMat;
+};
+
 vec4 projection_from_position(vec4 position) {
     vec4 projection = position * 0.5;
     projection.xy = vec2(projection.x + projection.w, projection.y + projection.w);
@@ -80,9 +84,11 @@ out vec4 vertexColor;
 out vec2 texCoord0;
 out vec2 texCoord1;
 out vec2 texCoord2;
+out vec4 shadowPos;
 
 void main() {
-    gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
+    vec4 viewPos = ModelViewMat * vec4(Position, 1.0);
+    gl_Position = ProjMat * viewPos;
 
     sphericalVertexDistance = fog_spherical_distance(Position);
     cylindricalVertexDistance = fog_cylindrical_distance(Position);
@@ -90,4 +96,7 @@ void main() {
     texCoord0 = UV0;
     texCoord1 = UV1;
     texCoord2 = UV2;
+
+    // LightSpaceViewMat = LightSpaceMat * InverseViewMat, so viewPos -> light space correctly
+    shadowPos = LightSpaceViewMat * viewPos;
 }
