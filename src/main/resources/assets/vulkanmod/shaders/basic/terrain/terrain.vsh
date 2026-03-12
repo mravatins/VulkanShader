@@ -13,12 +13,12 @@ layout (push_constant) uniform pushConstant {
 
 layout (binding = 3) uniform sampler2D Sampler2;
 
-
 layout (location = 0) out vec4 vertexColor;
 layout (location = 1) out vec2 texCoord0;
 layout (location = 2) out float sphericalVertexDistance;
 layout (location = 3) out float cylindricalVertexDistance;
 layout (location = 4) out vec3 worldPos;
+layout (location = 5) out float vertexAO;
 
 #define COMPRESSED_VERTEX
 
@@ -36,11 +36,9 @@ layout (location = 4) out vec3 worldPos;
 
 const float UV_INV = 1.0 / 32768.0;
 const vec3 POSITION_INV = vec3(1.0 / 2048.0);
-const vec3 POSITION_OFFSET = vec3(4.0);
 
 vec3 getVertexPosition() {
     const vec3 baseOffset = bitfieldExtract(ivec3(gl_InstanceIndex) >> ivec3(0, 16, 8), 0, 8);
-
     #ifdef COMPRESSED_VERTEX
         return fma(Position.xyz, POSITION_INV, ModelOffset + baseOffset);
     #else
@@ -57,6 +55,10 @@ void main() {
 
     const vec4 Color = unpackUnorm4x8(PackedColor);
     vertexColor = Color * sample_lightmap2(Sampler2, Position.a);
+
+    // AO from raw vertex alpha before lightmap multiply
+    float ao = clamp((Color.a - 0.5) * 2.0, 0.0, 1.0);
+    vertexAO = mix(0.55, 1.0, pow(ao, 0.65));
 
     texCoord0 = UV0 * UV_INV;
     worldPos = pos;

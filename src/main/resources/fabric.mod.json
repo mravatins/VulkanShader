@@ -3,7 +3,7 @@
   "id": "vulkanmod",
   "version": "${version}",
 
-  "name": "VulkanMod",
+  "name": "VulkanShader",
   "description": "Bring Vulkan to Minecraft!",
   "authors": [
     "Collateral"

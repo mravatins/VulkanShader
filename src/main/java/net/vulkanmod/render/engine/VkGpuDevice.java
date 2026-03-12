@@ -182,7 +182,7 @@ public class VkGpuDevice implements GpuDevice {
 
     @Override
     public String getRenderer() {
-        return "VulkanMod %s".formatted(Initializer.getVersion()) ;
+        return "VulkanShader %s".formatted(Initializer.getVersion()) ;
     }
 
     @Override

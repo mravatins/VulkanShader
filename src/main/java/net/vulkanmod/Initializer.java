@@ -14,7 +14,7 @@ import org.apache.logging.log4j.Logger;
 import java.nio.file.Path;
 
 public class Initializer implements ClientModInitializer {
-	public static final Logger LOGGER = LogManager.getLogger("VulkanMod");
+	public static final Logger LOGGER = LogManager.getLogger("VulkanShader");
 
 	private static String VERSION;
 	public static Config CONFIG;
@@ -28,7 +28,7 @@ public class Initializer implements ClientModInitializer {
 				.getMetadata()
 				.getVersion().getFriendlyString();
 
-		LOGGER.info("== VulkanMod ==");
+		LOGGER.info("== VulkanShader ==");
 
 		Platform.init();
 		VideoModeManager.init();

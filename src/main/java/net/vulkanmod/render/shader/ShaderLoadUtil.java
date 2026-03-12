@@ -24,7 +24,13 @@ public abstract class ShaderLoadUtil {
     public static final String RESOURCES_PATH = SPIRVUtils.class.getResource("/assets/vulkanmod").toExternalForm();
     public static final String SHADERS_PATH = "%s/shaders/".formatted(RESOURCES_PATH);
 
-    public static final Set<String> REMAPPED_SHADERS = Sets.newHashSet("core/screenquad.vsh","core/rendertype_item_entity_translucent_cull.vsh");
+    public static final Set<String> REMAPPED_SHADERS = Sets.newHashSet(
+        "core/screenquad.vsh",
+        "core/rendertype_item_entity_translucent_cull.vsh",
+        "core/rendertype_item_entity_translucent_cull.fsh",
+        "core/entity.vsh",
+        "core/entity.fsh"
+    );
 
     public static String resolveShaderPath(String path) {
         return resolveShaderPath(SHADERS_PATH, path);

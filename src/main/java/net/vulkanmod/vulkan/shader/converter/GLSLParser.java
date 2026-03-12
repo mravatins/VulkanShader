@@ -432,6 +432,7 @@ public class GLSLParser {
                 String type = field.type;
 
                 Uniform.Info uniformInfo = Uniform.createUniformInfo(type, name);
+                uniformInfo.setupSupplier();
 
                 builder.addUniformInfo(uniformInfo);
             }

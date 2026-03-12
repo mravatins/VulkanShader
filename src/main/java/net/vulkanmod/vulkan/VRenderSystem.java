@@ -53,6 +53,8 @@ public abstract class VRenderSystem {
 
     public static MappedBuffer lightSpaceMatrix = new MappedBuffer(16 * 4);
     public static MappedBuffer inverseProjectionMatrix = new MappedBuffer(16 * 4);
+    public static MappedBuffer inverseViewMatrix = new MappedBuffer(16 * 4);
+    public static MappedBuffer lightSpaceViewMatrix = new MappedBuffer(16 * 4);
 
     public static MappedBuffer cameraWorldPos = new MappedBuffer(3 * 4);
 
@@ -190,6 +192,26 @@ public abstract class VRenderSystem {
 
     public static MappedBuffer getLightSpaceMatrix() {
         return lightSpaceMatrix;
+    }
+
+    /**
+     * Store the camera-only view matrix (not including entity model transforms) so we can
+     * compute LightSpaceViewMat = LightSpaceMat * InverseViewMat for entity shadow lookups.
+     */
+    public static void setCameraViewMatrix(Matrix4f viewMat) {
+        // Invert to get InverseViewMat
+        viewMat.invert(new Matrix4f()).get(inverseViewMatrix.buffer.asFloatBuffer());
+        recomputeLightSpaceViewMatrix();
+    }
+
+    public static void recomputeLightSpaceViewMatrix() {
+        Matrix4f lsm = new Matrix4f().set(lightSpaceMatrix.buffer.asFloatBuffer());
+        Matrix4f ivm = new Matrix4f().set(inverseViewMatrix.buffer.asFloatBuffer());
+        lsm.mul(ivm).get(lightSpaceViewMatrix.buffer.asFloatBuffer());
+    }
+
+    public static MappedBuffer getLightSpaceViewMatrix() {
+        return lightSpaceViewMatrix;
     }
 
     public static void setShaderLightDir(int index, float x, float y, float z) {
