@@ -48,6 +48,10 @@ public abstract class VideoModeManager {
         long monitor = getMonitorByIndex(monitorIndex);
         osVideoMode = getCurrentVideoMode(monitor);
         videoModeSets = populateVideoResolutions(monitor);
+
+        // Reset selected video mode to highest valid option for the new monitor
+        selectedVideoMode = getFirstAvailable().getVideoMode();
+        applySelectedVideoMode();
     }
 
     public static long getMonitorByIndex(int idx) {
