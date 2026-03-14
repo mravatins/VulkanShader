@@ -38,6 +38,7 @@ public class Initializer implements ClientModInitializer {
 				.resolve("vulkanmod_settings.json");
 
 		CONFIG = loadConfig(configPath);
+		VideoModeManager.applyMonitorConfig(CONFIG.monitorIndex);
 
 		Renderer.register(VulkanModRenderer.INSTANCE);
 

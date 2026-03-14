@@ -78,6 +78,21 @@ public abstract class Options {
 
         return new OptionBlock[]{
                 new OptionBlock("", new Option<?>[]{
+                        new CyclingOption<>(Component.translatable("vulkanmod.options.monitorSelector"),
+                                IntStream.range(0, VideoModeManager.getMonitorCount()).boxed()
+                                         .toArray(Integer[]::new),
+                                value -> {
+                                    config.monitorIndex = value;
+                                    VideoModeManager.applyMonitorConfig(value);
+                                    if (minecraftOptions.fullscreen().get()
+                                            || config.windowMode != WindowMode.WINDOWED.mode)
+                                        fullscreenDirty = true;
+                                },
+                                () -> {
+                                    int idx = config.monitorIndex;
+                                    return (idx >= 0 && idx < VideoModeManager.getMonitorCount()) ? idx : 0;
+                                })
+                                .setTranslator(value -> Component.nullToEmpty(VideoModeManager.getMonitorName(value))),
                         resolutionOption,
                         RefreshRate,
                         new CyclingOption<>(Component.translatable("vulkanmod.options.windowMode"),
