@@ -22,6 +22,7 @@ public class Config {
     public boolean uniqueOpaqueLayer = true;
     public boolean entityCulling = true;
     public int device = -1;
+    public int monitorIndex = 0;
 
     public int ambientOcclusion = 1;
     public int frameQueueSize = 2;

@@ -1,6 +1,7 @@
 package net.vulkanmod.config.video;
 
 import net.vulkanmod.Initializer;
+import org.lwjgl.PointerBuffer;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.glfw.GLFWVidMode;
 
@@ -13,12 +14,69 @@ public abstract class VideoModeManager {
     private static VideoModeSet.VideoMode osVideoMode;
     private static VideoModeSet[] videoModeSets;
 
+    private static long[] monitors;
+    private static String[] monitorNames;
+
     public static VideoModeSet.VideoMode selectedVideoMode;
 
     public static void init() {
+        enumerateMonitors();
         long monitor = glfwGetPrimaryMonitor();
         osVideoMode = getCurrentVideoMode(monitor);
-        videoModeSets = populateVideoResolutions(GLFW.glfwGetPrimaryMonitor());
+        videoModeSets = populateVideoResolutions(monitor);
+    }
+
+    private static void enumerateMonitors() {
+        PointerBuffer monitorsBuffer = glfwGetMonitors();
+        if (monitorsBuffer != null && monitorsBuffer.limit() > 0) {
+            monitors = new long[monitorsBuffer.limit()];
+            monitorNames = new String[monitorsBuffer.limit()];
+            for (int i = 0; i < monitorsBuffer.limit(); i++) {
+                monitors[i] = monitorsBuffer.get(i);
+                String name = glfwGetMonitorName(monitors[i]);
+                monitorNames[i] = (name != null) ? name : ("Monitor " + (i + 1));
+            }
+        } else {
+            long primary = glfwGetPrimaryMonitor();
+            monitors = new long[]{primary};
+            String name = glfwGetMonitorName(primary);
+            monitorNames = new String[]{name != null ? name : "Primary"};
+        }
+    }
+
+    public static void applyMonitorConfig(int monitorIndex) {
+        long monitor = getMonitorByIndex(monitorIndex);
+        osVideoMode = getCurrentVideoMode(monitor);
+        videoModeSets = populateVideoResolutions(monitor);
+    }
+
+    public static long getMonitorByIndex(int idx) {
+        if (monitors != null && idx >= 0 && idx < monitors.length) {
+            return monitors[idx];
+        }
+        return glfwGetPrimaryMonitor();
+    }
+
+    public static long getConfiguredMonitor() {
+        return getMonitorByIndex(Initializer.CONFIG.monitorIndex);
+    }
+
+    public static int[] getConfiguredMonitorPos() {
+        long monitor = getConfiguredMonitor();
+        int[] x = new int[1], y = new int[1];
+        glfwGetMonitorPos(monitor, x, y);
+        return new int[]{x[0], y[0]};
+    }
+
+    public static int getMonitorCount() {
+        return monitors != null ? monitors.length : 1;
+    }
+
+    public static String getMonitorName(int index) {
+        if (monitorNames != null && index >= 0 && index < monitorNames.length) {
+            return (index + 1) + ": " + monitorNames[index];
+        }
+        return "Monitor " + (index + 1);
     }
 
     public static void applySelectedVideoMode() {

@@ -111,7 +111,7 @@ public abstract class WindowMixin {
     private void setMode() {
         Config config = Initializer.CONFIG;
 
-        long monitor = GLFW.glfwGetPrimaryMonitor();
+        long monitor = VideoModeManager.getConfiguredMonitor();
         if (this.fullscreen) {
             {
                 VideoModeSet.VideoMode videoMode = config.videoMode;
@@ -157,11 +157,12 @@ public abstract class WindowMixin {
                 this.windowedHeight = this.height;
             }
 
+            int[] monitorPos = VideoModeManager.getConfiguredMonitorPos();
             int width = videoMode.width;
             int height = videoMode.height;
 
             GLFW.glfwSetWindowAttrib(this.handle, GLFW_DECORATED, GLFW_FALSE);
-            GLFW.glfwSetWindowMonitor(this.handle, 0L, 0, 0, width, height, -1);
+            GLFW.glfwSetWindowMonitor(this.handle, 0L, monitorPos[0], monitorPos[1], width, height, -1);
 
             this.width = width;
             this.height = height;
