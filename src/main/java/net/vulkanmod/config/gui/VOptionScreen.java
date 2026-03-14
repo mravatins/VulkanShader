@@ -1,8 +1,6 @@
 package net.vulkanmod.config.gui;
 
 import com.google.common.collect.Lists;
-import net.minecraft.ChatFormatting;
-import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.Screen;
@@ -13,7 +11,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.FormattedCharSequence;
 import net.vulkanmod.Initializer;
-import net.vulkanmod.config.UpdateChecker;
 import net.vulkanmod.config.gui.render.GuiRenderer;
 import net.vulkanmod.config.gui.widget.VAbstractWidget;
 import net.vulkanmod.config.gui.widget.VButtonWidget;
@@ -39,8 +36,6 @@ public class VOptionScreen extends Screen {
     private int tooltipX;
     private int tooltipY;
     private int tooltipWidth;
-
-    private VButtonWidget supportButton;
 
     private VButtonWidget doneButton;
     private VButtonWidget applyButton;
@@ -181,35 +176,11 @@ public class VOptionScreen extends Screen {
                 button -> this.applyOptions()
         );
 
-        buttonWidth = minecraft.font.width(Component.translatable("vulkanmod.options.buttons.kofi")) + 10;
-        x0 = (this.width - buttonWidth - rightMargin);
-        this.supportButton = new VButtonWidget(
-                x0, 6,
-                buttonWidth, buttonHeight,
-                Component.translatable("vulkanmod.options.buttons.kofi"),
-                button -> Util.getPlatform().openUri("https://ko-fi.com/xcollateral")
-        );
-
         this.buttons.add(this.applyButton);
         this.buttons.add(this.doneButton);
-        this.buttons.add(this.supportButton);
 
         this.addWidget(this.applyButton);
         this.addWidget(this.doneButton);
-        this.addWidget(this.supportButton);
-
-        if (UpdateChecker.isUpdateAvailable()) {
-            buttonWidth = minecraft.font.width(Component.translatable("vulkanmod.options.buttons.update_available")) + 10;
-            var updateButton = new VButtonWidget(
-                    x0 - buttonWidth - buttonMargin, 6,
-                    buttonWidth, buttonHeight,
-                    Component.translatable("vulkanmod.options.buttons.update_available").withStyle(ChatFormatting.UNDERLINE),
-                    button -> Util.getPlatform().openUri("https://modrinth.com/mod/vulkanmod")
-            );
-
-            this.buttons.add(updateButton);
-            this.addWidget(updateButton);
-        }
     }
 
     @Override

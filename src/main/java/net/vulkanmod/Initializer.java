@@ -5,7 +5,6 @@ import net.fabricmc.fabric.api.renderer.v1.Renderer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.vulkanmod.config.Config;
 import net.vulkanmod.config.Platform;
-import net.vulkanmod.config.UpdateChecker;
 import net.vulkanmod.config.video.VideoModeManager;
 import net.vulkanmod.render.chunk.build.frapi.VulkanModRenderer;
 import org.apache.logging.log4j.LogManager;
@@ -41,8 +40,6 @@ public class Initializer implements ClientModInitializer {
 		VideoModeManager.applyMonitorConfig(CONFIG.monitorIndex);
 
 		Renderer.register(VulkanModRenderer.INSTANCE);
-
-		UpdateChecker.checkForUpdates();
 	}
 
 	private static Config loadConfig(Path path) {
