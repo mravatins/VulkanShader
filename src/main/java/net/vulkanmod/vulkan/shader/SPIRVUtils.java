@@ -1,6 +1,7 @@
 package net.vulkanmod.vulkan.shader;
 
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import net.vulkanmod.render.shader.ShaderPackManager;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.NativeResource;
 import org.lwjgl.util.shaderc.ShadercIncludeResolveI;
@@ -115,6 +116,17 @@ public class SPIRVUtils {
 
             try (MemoryStack stack = MemoryStack.stackPush()) {
                 Path path;
+
+                try (var shaderPackIncludeStream = ShaderPackManager.openActiveShaderResource("include/" + requested)) {
+                    if (shaderPackIncludeStream != null) {
+                        byte[] bytes = shaderPackIncludeStream.readAllBytes();
+
+                        return ShadercIncludeResult.malloc(stack)
+                                .source_name(stack.ASCII(requested))
+                                .content(stack.bytes(bytes))
+                                .user_data(user_data).address();
+                    }
+                }
 
                 for (String includePath : includePaths) {
                     path = Paths.get(new URI(String.format("%s%s", includePath, requested)));

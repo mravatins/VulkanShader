@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import net.minecraft.client.renderer.RenderType;
 import net.vulkanmod.render.chunk.build.thread.ThreadBuilderPack;
 import net.vulkanmod.render.shader.ShaderLoadUtil;
+import net.vulkanmod.render.shader.ShaderPackManager;
 import net.vulkanmod.render.vertex.CustomVertexFormat;
 import net.vulkanmod.render.vertex.TerrainRenderType;
 import net.vulkanmod.vulkan.shader.GraphicsPipeline;
@@ -52,8 +53,16 @@ public abstract class PipelineManager {
     private static GraphicsPipeline createPipeline(String configName, VertexFormat vertexFormat) {
         Pipeline.Builder pipelineBuilder = new Pipeline.Builder(vertexFormat, configName);
 
-        final String path = ShaderLoadUtil.resolveShaderPath("basic");
+        String path = ShaderLoadUtil.resolveShaderPath("basic");
         JsonObject config = ShaderLoadUtil.getJsonConfig(path, configName);
+        if (config == null) {
+            path = ShaderLoadUtil.resolveBuiltinShaderPath("basic");
+            config = ShaderLoadUtil.getJsonConfig(path, configName);
+        }
+
+        if (config == null) {
+            throw new IllegalStateException("Unable to find shader config for pipeline " + configName);
+        }
         pipelineBuilder.parseBindings(config);
 
         ShaderLoadUtil.loadShaders(pipelineBuilder, config, configName, path);
@@ -65,6 +74,13 @@ public abstract class PipelineManager {
         }
 
         return pipeline;
+    }
+
+    public static void reloadPipelines() {
+        destroyPipelines();
+        createBasicPipelines();
+        setDefaultShader();
+        ThreadBuilderPack.defaultTerrainBuilderConstructor();
     }
 
     public static GraphicsPipeline getTerrainShader(TerrainRenderType renderType) {
@@ -100,12 +116,12 @@ public abstract class PipelineManager {
     }
 
     public static void destroyPipelines() {
-        terrainShaderEarlyZ.cleanUp();
-        terrainShader.cleanUp();
-        waterShader.cleanUp();
-        fastBlitPipeline.cleanUp();
-        cloudsPipeline.cleanUp();
-        shadowTerrainShader.cleanUp();
-        shadowEntityShader.cleanUp();
+        if (terrainShaderEarlyZ != null) terrainShaderEarlyZ.cleanUp();
+        if (terrainShader != null) terrainShader.cleanUp();
+        if (waterShader != null) waterShader.cleanUp();
+        if (fastBlitPipeline != null) fastBlitPipeline.cleanUp();
+        if (cloudsPipeline != null) cloudsPipeline.cleanUp();
+        if (shadowTerrainShader != null) shadowTerrainShader.cleanUp();
+        if (shadowEntityShader != null) shadowEntityShader.cleanUp();
     }
 }

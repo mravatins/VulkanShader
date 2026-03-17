@@ -13,13 +13,20 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.block.model.BlockModelPart;
 import net.minecraft.client.renderer.block.model.BlockStateModel;
 import net.minecraft.client.renderer.chunk.ChunkSectionLayer;
+import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.BlockAndTintGetter;
 import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.block.IronBarsBlock;
+import net.minecraft.world.level.block.LeavesBlock;
+import net.minecraft.world.level.block.StainedGlassBlock;
+import net.minecraft.world.level.block.StainedGlassPaneBlock;
+import net.minecraft.world.level.block.TintedGlassBlock;
 import net.minecraft.world.phys.shapes.BooleanOp;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.vulkanmod.interfaces.color.BlockColorsExtended;
+import net.vulkanmod.render.chunk.WorldRenderer;
 import net.vulkanmod.render.chunk.build.color.BlockColorRegistry;
 import net.vulkanmod.render.chunk.build.frapi.VulkanModRenderer;
 import net.vulkanmod.render.chunk.build.light.LightPipeline;
@@ -248,7 +255,110 @@ public abstract class AbstractBlockRenderContext extends AbstractRenderContext {
 //				quad.lightmap(i, ColorHelper.maxBrightness(quad.lightmap(i), data.lm[i]));
 				data.lm[i] = ColorHelper.maxBrightness(quad.lightmap(i), data.lm[i]);
 			}
+
+			applyBakedSunShadow(quad, data);
 		}
+	}
+
+	private void applyBakedSunShadow(MutableQuadViewImpl quad, QuadLightData data) {
+		if (quad.lightFace() != Direction.UP || WorldRenderer.getTerrainSunDirY() <= 0.02f) {
+			return;
+		}
+
+		int minSkyLight = 15;
+		for (int i = 0; i < 4; i++) {
+			minSkyLight = Math.min(minSkyLight, LightTexture.sky(data.lm[i]));
+		}
+
+		float sunlight = minSkyLight / 15.0f;
+		float visibility = sampleDirectionalSunVisibility();
+		float sunStrength = Mth.clamp(1.0f - WorldRenderer.getTerrainSunDirY() * 0.65f, 0.35f, 0.82f);
+		float shadowAmount = (1.0f - visibility) * sunStrength;
+		float finalShadow = 1.0f - shadowAmount * 0.42f;
+		finalShadow = Mth.lerp(1.0f - sunlight, finalShadow, 1.0f);
+
+		for (int i = 0; i < 4; i++) {
+			quad.color(i, ColorHelper.multiplyRGB(quad.color(i), finalShadow));
+		}
+	}
+
+	private float sampleDirectionalSunVisibility() {
+		float sunX = -WorldRenderer.getTerrainSunDirX();
+		float sunY = -WorldRenderer.getTerrainSunDirY();
+		float sunZ = -WorldRenderer.getTerrainSunDirZ();
+		float len = Mth.sqrt(sunX * sunX + sunY * sunY + sunZ * sunZ);
+		if (len < 1.0e-4f) {
+			return 1.0f;
+		}
+
+		sunX /= len;
+		sunY /= len;
+		sunZ /= len;
+
+		float cx = this.blockPos.getX() + 0.5f;
+		float cy = this.blockPos.getY() + 1.02f;
+		float cz = this.blockPos.getZ() + 0.5f;
+		float horizonFactor = 1.0f - Mth.clamp(WorldRenderer.getTerrainSunDirY(), 0.0f, 1.0f);
+		float maxDistance = Mth.lerp(horizonFactor, 6.0f, 18.0f);
+		float step = 0.5f;
+		float visibility = 1.0f;
+
+		BlockPos.MutableBlockPos samplePos = this.tempPos;
+		for (float dist = step; dist <= maxDistance; dist += step) {
+			int sx = Mth.floor(cx + sunX * dist);
+			int sy = Mth.floor(cy + sunY * dist);
+			int sz = Mth.floor(cz + sunZ * dist);
+
+			if (sx == this.blockPos.getX() && sy == this.blockPos.getY() && sz == this.blockPos.getZ()) {
+				continue;
+			}
+
+			samplePos.set(sx, sy, sz);
+			float transmission = getShadowTransmission(samplePos);
+			if (transmission >= 0.999f) {
+				continue;
+			}
+
+			visibility *= transmission;
+			if (visibility <= 0.2f) {
+				return 0.2f;
+			}
+		}
+
+		return visibility;
+	}
+
+	private float getShadowTransmission(BlockPos samplePos) {
+		BlockState state = this.renderRegion.getBlockState(samplePos);
+		if (state.isAir() || state.getLightEmission() > 0) {
+			return 1.0f;
+		}
+
+		if (state.getBlock() instanceof LeavesBlock) {
+			return 0.55f;
+		}
+
+		if (state.getBlock() instanceof StainedGlassBlock
+				|| state.getBlock() instanceof StainedGlassPaneBlock
+				|| state.getBlock() instanceof TintedGlassBlock
+				|| state.getBlock() instanceof IronBarsBlock) {
+			return 0.92f;
+		}
+
+		ChunkSectionLayer renderType = ItemBlockRenderTypes.getChunkRenderType(state);
+		if (renderType == ChunkSectionLayer.TRANSLUCENT) {
+			return 0.85f;
+		}
+
+		if (!state.isSolidRender() && state.propagatesSkylightDown()) {
+			return 0.75f;
+		}
+
+		if (!state.isSolidRender()) {
+			return 0.6f;
+		}
+
+		return 0.0f;
 	}
 
 	public ChunkSectionLayer effectiveRenderLayer(@Nullable ChunkSectionLayer quadRenderLayer) {

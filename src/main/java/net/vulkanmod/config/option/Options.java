@@ -12,6 +12,7 @@ import net.vulkanmod.config.video.VideoModeSet;
 import net.vulkanmod.config.video.WindowMode;
 import net.vulkanmod.render.chunk.WorldRenderer;
 import net.vulkanmod.render.chunk.build.light.LightMode;
+import net.vulkanmod.render.shader.ShaderPackManager;
 import net.vulkanmod.render.vertex.TerrainRenderType;
 import net.vulkanmod.vulkan.Renderer;
 import net.vulkanmod.vulkan.device.DeviceManager;
@@ -348,5 +349,27 @@ public abstract class Options {
                 })
         };
 
+    }
+
+    public static OptionBlock[] getShaderOpts() {
+        return new OptionBlock[] {
+                new OptionBlock("", new Option[] {
+                        new CyclingOption<>(Component.literal("Shader Pack"),
+                                ShaderPackManager.getAvailableShaderPacks(),
+                                value -> {
+                                    config.shaderPack = value;
+                                    ShaderPackManager.reloadActiveShaderPack();
+                                },
+                                () -> {
+                                    String shaderPack = config.shaderPack;
+                                    if (shaderPack == null || shaderPack.isBlank()) {
+                                        return ShaderPackManager.INTERNAL_PACK;
+                                    }
+                                    return shaderPack;
+                                })
+                                .setTranslator(Component::literal)
+                                .setTooltip(Component.literal("Select a shader pack from the Minecraft shaders folder and press Apply to reload shaders."))
+                })
+        };
     }
 }

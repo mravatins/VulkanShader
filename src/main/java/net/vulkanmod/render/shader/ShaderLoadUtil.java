@@ -33,6 +33,10 @@ public abstract class ShaderLoadUtil {
     );
 
     public static String resolveShaderPath(String path) {
+        return resolveBuiltinShaderPath(path);
+    }
+
+    public static String resolveBuiltinShaderPath(String path) {
         return resolveShaderPath(SHADERS_PATH, path);
     }
 
@@ -109,16 +113,22 @@ public abstract class ShaderLoadUtil {
             return null;
         }
 
-        String basePath = path;
-        String configPath = "%s/%s/%s.json".formatted(basePath, rendertype, rendertype);
-
         InputStream stream;
         try {
-            stream = getInputStream(configPath);
+            stream = ShaderPackManager.openActiveShaderResource("%s/%s/%s.json".formatted("basic", rendertype, rendertype));
+            if (stream == null) {
+                stream = ShaderPackManager.openActiveShaderResource("%s/%s.json".formatted("basic", rendertype));
+            }
 
             if (stream == null) {
-                configPath = "%s/%s.json".formatted(basePath, rendertype);
+                String basePath = path;
+                String configPath = "%s/%s/%s.json".formatted(basePath, rendertype, rendertype);
                 stream = getInputStream(configPath);
+
+                if (stream == null) {
+                    configPath = "%s/%s.json".formatted(basePath, rendertype);
+                    stream = getInputStream(configPath);
+                }
             }
 
             if (stream == null) {
@@ -201,24 +211,24 @@ public abstract class ShaderLoadUtil {
 
         InputStream stream;
         try {
-            stream = getInputStream(shaderFile);
+            stream = openPackOrBuiltinStream(configName, shaderName, shaderExtension, basePath, shaderPath);
 
             if (stream == null) {
                 shaderPath = "/%s".formatted(shaderName);
                 shaderFile = "%s%s%s".formatted(basePath, shaderPath, shaderExtension);
-                stream = getInputStream(shaderFile);
+                stream = openPackOrBuiltinStream(configName, shaderName, shaderExtension, basePath, shaderPath);
             }
 
             if (stream == null) {
                 shaderPath = "/%s/%s".formatted(configName, shaderName);
                 shaderFile = "%s%s%s".formatted(basePath, shaderPath, shaderExtension);
-                stream = getInputStream(shaderFile);
+                stream = openPackOrBuiltinStream(configName, shaderName, shaderExtension, basePath, shaderPath);
             }
 
             if (stream == null) {
                 shaderPath = "/%s/%s".formatted(shaderName, shaderName);
                 shaderFile = "%s%s%s".formatted(basePath, shaderPath, shaderExtension);
-                stream = getInputStream(shaderFile);
+                stream = openPackOrBuiltinStream(configName, shaderName, shaderExtension, basePath, shaderPath);
             }
 
             if (stream == null) {
@@ -261,5 +271,16 @@ public abstract class ShaderLoadUtil {
         } catch (URISyntaxException | IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static InputStream openPackOrBuiltinStream(String configName, String shaderName, String shaderExtension, String basePath, String shaderPath) {
+        String relativePath = "basic%s%s".formatted(shaderPath, shaderExtension);
+        InputStream stream = ShaderPackManager.openActiveShaderResource(relativePath);
+        if (stream != null) {
+            return stream;
+        }
+
+        String shaderFile = "%s%s%s".formatted(basePath, shaderPath, shaderExtension);
+        return getInputStream(shaderFile);
     }
 }

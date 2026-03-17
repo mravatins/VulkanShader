@@ -62,6 +62,11 @@ import java.util.*;
 
 public class WorldRenderer {
     private static WorldRenderer INSTANCE;
+    private static final int TERRAIN_SUN_SHADOW_BUCKETS = 1024;
+    private static float terrainSunDirX = 0.0f;
+    private static float terrainSunDirY = 1.0f;
+    private static float terrainSunDirZ = 0.0f;
+    private static int terrainSunShadowBucket = -1;
 
     public static WorldRenderer init(EntityRenderDispatcher entityRenderDispatcher,
                                      BlockEntityRenderDispatcher blockEntityRenderDispatcher,
@@ -170,6 +175,7 @@ public class WorldRenderer {
         benchCallback();
 
         this.cameraPos = camera.getPosition();
+        this.updateTerrainSunShadowState();
         if (this.minecraft.options.getEffectiveRenderDistance() != this.renderDistance) {
             this.allChanged();
         }
@@ -553,9 +559,13 @@ public class WorldRenderer {
 
         VTextureSelector.bindShaderTextures(pipeline);
         if (renderType == TerrainRenderType.TRANSLUCENT) {
-            VTextureSelector.bindTexture(3, net.vulkanmod.vulkan.VRenderSystem.sceneColorImage);
+            var sceneColor = net.vulkanmod.vulkan.VRenderSystem.sceneColorImage;
+            VTextureSelector.bindTexture(3, sceneColor != null ? sceneColor : VTextureSelector.getWhiteTexture());
+            var shadowMap = Renderer.getInstance().getShadowPass().getShadowMap();
+            VTextureSelector.bindTexture(6, shadowMap != null ? shadowMap : VTextureSelector.getWhiteTexture());
         } else {
-            VTextureSelector.bindTexture(3, Renderer.getInstance().getShadowPass().getShadowMap());
+            var shadowMap = Renderer.getInstance().getShadowPass().getShadowMap();
+            VTextureSelector.bindTexture(3, shadowMap != null ? shadowMap : VTextureSelector.getWhiteTexture());
         }
 
         IndexBuffer indexBuffer = Renderer.getDrawer().getQuadsIndexBuffer().getIndexBuffer();
@@ -571,8 +581,8 @@ public class WorldRenderer {
                 var queue = chunkArea.sectionQueue;
                 DrawBuffers drawBuffers = chunkArea.drawBuffers;
 
-                renderer.uploadAndBindUBOs(pipeline);
                 if (drawBuffers.getAreaBuffer(renderType) != null && queue.size() > 0) {
+                    renderer.uploadAndBindUBOs(pipeline);
 
                     drawBuffers.bindBuffers(Renderer.getCommandBuffer(), pipeline, renderType, camX, camY, camZ);
                     renderer.uploadAndBindUBOs(pipeline);
@@ -707,6 +717,36 @@ public class WorldRenderer {
         return this.sectionGraph.getSectionQueue().size();
     }
 
+    private void updateTerrainSunShadowState() {
+        if (this.level == null || this.sectionGraph == null) {
+            return;
+        }
+
+        float timeOfDay = ((this.level.getDayTime() % 24000L) + this.partialTick) / 24000.0f;
+        float sunAngle = timeOfDay * 2.0f * (float) Math.PI;
+
+        terrainSunDirX = (float) Math.cos(sunAngle);
+        terrainSunDirY = (float) Math.sin(sunAngle);
+        terrainSunDirZ = 0.0f;
+
+        int bucket = Math.floorMod((int) (timeOfDay * TERRAIN_SUN_SHADOW_BUCKETS), TERRAIN_SUN_SHADOW_BUCKETS);
+        if (bucket == terrainSunShadowBucket) {
+            return;
+        }
+
+        terrainSunShadowBucket = bucket;
+
+        if (this.sectionGrid == null || this.sectionGrid.sections == null) {
+            return;
+        }
+
+        for (RenderSection section : this.sectionGrid.sections) {
+            if (section != null) {
+                section.setDirty(false);
+            }
+        }
+    }
+
     public void setSectionDirty(int x, int y, int z, boolean flag) {
         this.sectionGrid.setDirty(x, y, z, flag);
 
@@ -750,6 +790,18 @@ public class WorldRenderer {
 
     public static WorldRenderer getInstance() {
         return INSTANCE;
+    }
+
+    public static float getTerrainSunDirX() {
+        return terrainSunDirX;
+    }
+
+    public static float getTerrainSunDirY() {
+        return terrainSunDirY;
+    }
+
+    public static float getTerrainSunDirZ() {
+        return terrainSunDirZ;
     }
 
     public static ClientLevel getLevel() {
