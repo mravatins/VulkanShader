@@ -7,6 +7,7 @@ import net.vulkanmod.config.Config;
 import net.vulkanmod.config.Platform;
 import net.vulkanmod.config.video.VideoModeManager;
 import net.vulkanmod.render.chunk.build.frapi.VulkanModRenderer;
+import net.vulkanmod.render.shader.ShaderPackManager;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -37,6 +38,7 @@ public class Initializer implements ClientModInitializer {
 				.resolve("vulkanmod_settings.json");
 
 		CONFIG = loadConfig(configPath);
+		ShaderPackManager.ensureShaderDirectory();
 		VideoModeManager.applyMonitorConfig(CONFIG.monitorIndex);
 
 		Renderer.register(VulkanModRenderer.INSTANCE);

@@ -31,6 +31,16 @@ Built jars are output to `build/libs/`.
 ./gradlew runClient
 ```
 
+## Shader Pack Development
+
+External shader packs can be loaded from the Minecraft `shaders` folder.
+
+- Detailed authoring guide: [`docs/SHADER_PACKS.md`](/home/nsunil/git/VulkanShader/docs/SHADER_PACKS.md)
+- In the dev environment, the shader folder is `run/shaders/`
+- In-game, open `Video Settings -> Shaders`, pick a pack, then press `Apply`
+
+Both folder-based packs and `.zip` packs are supported.
+
 ## Install (Local Build)
 
 1. Build the mod with `./gradlew build`.

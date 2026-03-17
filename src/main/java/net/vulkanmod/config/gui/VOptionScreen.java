@@ -76,6 +76,12 @@ public class VOptionScreen extends Screen {
                 Options.getOtherOpts()
         );
         this.optionPages.add(page);
+
+        page = new OptionPage(
+                "Shaders",
+                Options.getShaderOpts()
+        );
+        this.optionPages.add(page);
     }
 
     @Override

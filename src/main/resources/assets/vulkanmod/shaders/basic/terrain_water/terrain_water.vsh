@@ -14,7 +14,7 @@ layout (push_constant) uniform pushConstant {
     vec3 ModelOffset;
 };
 
-layout (binding = 4) uniform sampler2D Sampler2;
+layout (binding = 5) uniform sampler2D Sampler2;
 
 layout (location = 0) out vec4 vertexColor;
 layout (location = 1) out vec2 texCoord0;
@@ -47,9 +47,9 @@ vec3 getVertexPosition() {
 
 // Returns a Y displacement for a given XZ world position and time
 float waveHeight(vec2 wxz, float t) {
-    float w1 = sin(wxz.x * 1.20 + t * 1.1) * cos(wxz.y * 0.90 + t * 0.7) * 0.030;
-    float w2 = sin(wxz.x * 2.10 - t * 0.8) * sin(wxz.y * 1.80 + t * 1.3) * 0.015;
-    float w3 = cos(wxz.x * 0.50 + t * 0.3) * cos(wxz.y * 0.40 - t * 0.25) * 0.020; // slow swell
+    float w1 = sin(wxz.x * 2.35 + t * 1.1) * cos(wxz.y * 2.00 + t * 0.7) * 0.022;
+    float w2 = sin(wxz.x * 3.80 - t * 0.8) * sin(wxz.y * 3.10 + t * 1.3) * 0.012;
+    float w3 = cos(wxz.x * 1.35 + t * 0.3) * cos(wxz.y * 1.10 - t * 0.25) * 0.012;
     return w1 + w2 + w3;
 }
 
@@ -63,13 +63,7 @@ void main() {
     // Primary Y wave
     float dy = waveHeight(wxz, Time);
 
-    // Slight XZ ripple to give horizontal sway, adds to the 3D feel
-    float dx = sin(wxz.y * 1.5 + Time * 0.9) * 0.004;
-    float dz = cos(wxz.x * 1.3 - Time * 0.7) * 0.004;
-
     pos.y += dy;
-    pos.x += dx;
-    pos.z += dz;
 
     gl_Position = MVP * vec4(pos, 1.0);
 

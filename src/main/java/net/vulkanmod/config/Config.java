@@ -30,6 +30,7 @@ public class Config {
 
     public boolean backFaceCulling = true;
     public boolean textureAnimations = true;
+    public String shaderPack = "Internal";
 
     public void write() {
 

@@ -7,6 +7,7 @@ import net.vulkanmod.vulkan.memory.buffer.BufferSlice;
 import net.vulkanmod.vulkan.memory.buffer.UniformBuffer;
 import net.vulkanmod.vulkan.shader.descriptor.ImageDescriptor;
 import net.vulkanmod.vulkan.shader.descriptor.UBO;
+import net.vulkanmod.vulkan.texture.VTextureSelector;
 import net.vulkanmod.vulkan.texture.VulkanImage;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
@@ -104,7 +105,11 @@ public class DescriptorSets {
             VulkanImage image = imageDescriptor.getImage();
 
             if (image == null) {
-                throw new NullPointerException();
+                if (imageDescriptor.useSampler) {
+                    image = VTextureSelector.getWhiteTexture();
+                } else {
+                    throw new NullPointerException();
+                }
             }
 
             long view = imageDescriptor.getImageView(image);
@@ -189,7 +194,11 @@ public class DescriptorSets {
             VulkanImage image = imageDescriptor.getImage();
 
             if (image == null) {
-                throw new NullPointerException();
+                if (imageDescriptor.useSampler) {
+                    image = VTextureSelector.getWhiteTexture();
+                } else {
+                    throw new NullPointerException();
+                }
             }
 
             long view = imageDescriptor.getImageView(image);
